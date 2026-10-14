@@ -82,7 +82,7 @@ jobs:
         run: sha256sum pycompile-* > SHA256SUMS
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: pycompile ${{ github.ref_name }}
