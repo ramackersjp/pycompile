@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install — pycompile</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html"><span class="logo"></span> pycompile</a>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="docs.html">Docs</a>
+        <a href="install.html" class="active">Install</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/ramackersjp/Python_Compiler">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container">
+      <h1 style="font-size:38px;margin:0 0 8px;">Install pycompile</h1>
+      <p class="sub">pycompile is a Rust program. Installing it gives you two commands —
+      <code>pycompile</code> and <code>python_compiler</code> — that behave identically.</p>
+
+      <h2>Requirements</h2>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Rust toolchain</h3>
+          <p>Any recent stable Rust. Install with
+          <a href="https://rustup.rs">rustup</a> if you do not have it:</p>
+          <pre style="background:var(--code-bg);color:var(--code-text);padding:14px;border-radius:10px;overflow-x:auto;"><code>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></pre>
+        </div>
+        <div class="card">
+          <h3>A C compiler</h3>
+          <p>pycompile generates C and hands it to a system compiler. On Linux/macOS install
+          <code>build-essential</code> or Xcode command line tools. On Windows, install MSVC
+          Build Tools, MinGW, or LLVM/clang.</p>
+        </div>
+      </div>
+
+      <h2 id="cargo">Option 1 — Install with Cargo</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Install the crate</h3>
+            <p>This fetches, compiles and installs the latest published version.</p>
+            <pre><code>cargo install python-compiler</code></pre>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Verify the install</h3>
+            <p>Both commands must print the same version.</p>
+            <pre><code>pycompile --version
+python_compiler --version</code></pre>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Read the manual</h3>
+            <p>Print the full manual straight to your terminal.</p>
+            <pre><code>pycompile man</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="source" style="margin-top:56px;">Option 2 — Build from source</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Clone the repository</h3>
+            <pre><code>git clone https://github.com/ramackersjp/Python_Compiler
+cd Python_Compiler</code></pre>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Build in release mode</h3>
+            <p>Release builds enable link-time optimization and strip symbols for small
+            binaries.</p>
+            <pre><code>cargo build --release</code></pre>
+          </div>
+        </div>
+        <div class="step">
+          <div class="num"></div>
+          <div>
+            <h3>Put it on your PATH</h3>
+            <p>Binaries are in <code>target/release/</code>. Either copy them somewhere on
+            your <code>PATH</code>, or install them with Cargo:</p>
+            <pre><code>cargo install --path . --release</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <h2 id="man" style="margin-top:56px;">Install the man page</h2>
+      <p>Once installed you can drop a real <code>man(1)</code> page so that
+      <code>man pycompile</code> and <code>man python_compiler</code> work:</p>
+      <pre><code><span class="tok-c"># Install into /usr/local/share/man/man1 (may need sudo)</span>
+sudo pycompile man --install
+
+<span class="tok-c"># Or install into a custom prefix</span>
+pycompile man --install --prefix ~/.local
+
+<span class="tok-c"># Then read it</span>
+man pycompile
+man python_compiler</code></pre>
+      <p class="muted">If you installed into a custom prefix, make sure your man path
+      includes it (for example <code>export MANPATH=~/.local/share/man:$MANPATH</code>).</p>
+
+      <h2 style="margin-top:56px;">Quick test</h2>
+      <p>Compile a hello-world and run the resulting native binary:</p>
+      <pre><code>cat &gt; hello.py &lt;&lt;'EOF'
+name = "World"
+print(f"Hello, {name}!")
+EOF
+
+pycompile hello.py -o hello
+./hello</code></pre>
+      <p class="muted">You should see <code>Hello, World!</code> — produced by a native
+      executable with no Python involved.</p>
+
+      <div class="note">
+        <strong>Tip:</strong> set <code>CC</code> if you want to control which C compiler is
+        used, for example <code>CC=clang pycompile hello.py</code>.
+      </div>
+
+      <h2 style="margin-top:56px;">Packaging and platforms</h2>
+      <p class="sub">How pycompile is distributed today, and what is planned. Nothing here
+      affects a normal Cargo or from-source install.</p>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Linux</h3>
+          <p>Distributed as <code>.tar.gz</code> release archives and via
+          <code>cargo install</code>. OS packages (Flatpak, Snap, AUR, <code>.deb</code>,
+          <code>.rpm</code>) are planned but not published yet.</p>
+        </div>
+        <div class="card">
+          <h3>macOS</h3>
+          <p>Distributed as <code>.tar.gz</code> release archives for Intel and Apple
+          Silicon. A Homebrew formula and tap are planned but not published yet.</p>
+        </div>
+        <div class="card">
+          <h3>Windows</h3>
+          <p>Distributed as a <code>.zip</code> release. pycompile needs a C compiler to
+          produce binaries: install MSVC Build Tools, or use MinGW-w64 / LLVM
+          (<code>clang</code>). Add the extracted folder to <code>PATH</code>. A
+          <code>winget</code> / <code>scoop</code> package is planned.</p>
+        </div>
+      </div>
+      <div class="note">
+        <strong>Note:</strong> the compiler itself is a single native binary; the C
+        compiler requirement applies only when you invoke pycompile to build a program.
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="container">
+      <h2>Prefer a prebuilt binary?</h2>
+      <p>Grab a ready-made build from the releases page.</p>
+      <a class="btn btn-primary" href="download.html">Go to download</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>
+        <span class="brand" style="font-size:17px;"><span class="logo"></span> pycompile</span>
+        <div class="mt-8">Compile Python to native binaries. MIT licensed.</div>
+      </div>
+      <div>
+        <a href="docs.html">Docs</a> ·
+        <a href="install.html">Install</a> ·
+        <a href="download.html">Download</a> ·
+        <a href="https://github.com/ramackersjp/Python_Compiler">GitHub</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

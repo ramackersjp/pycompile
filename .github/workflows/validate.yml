@@ -1,0 +1,83 @@
+name: validate
+
+on:
+  push:
+    branches: [trunk, main]
+  pull_request:
+    branches: [trunk, main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Format, lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Test
+        run: cargo test --all-targets
+
+      - name: Verify examples compile to native binaries
+        run: |
+          set -e
+          for f in examples/*.py; do
+            name="$(basename "$f" .py)"
+            ./target/release/pycompile "$f" -o "/tmp/example-$name"
+            args=""
+            if [ "$name" = "args" ]; then args="A B"; fi
+            # shellcheck disable=SC2086
+            "/tmp/example-$name" $args > /tmp/out.txt
+            if [ -f "examples/$name.out" ]; then
+              diff -u "examples/$name.out" /tmp/out.txt
+            fi
+          done
+
+  manpage:
+    name: Man page is valid
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint the roff man page
+        run: |
+          set -e
+          # Render the man page; groff exits non-zero on fatal errors.
+          man --warnings -E UTF-8 -l docs/pycompile.1 > /dev/null
+
+  site:
+    name: Site builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required site files exist
+        run: |
+          set -e
+          for f in docs/index.html docs/docs.html docs/install.html docs/download.html docs/style.css docs/pycompile.1; do
+            test -f "$f"
+          done

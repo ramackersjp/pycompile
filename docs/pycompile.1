@@ -1,0 +1,278 @@
+.TH PYCOMPILE 1 "October 2026" "pycompile 0.1.0" "User Commands"
+.SH NAME
+pycompile, python_compiler \- compile Python source into a standalone native binary
+.SH SYNOPSIS
+.B pycompile
+[\fIOPTIONS\fR] \fIINPUT\fR [\-\- \fIPROGRAM_ARGS\fR...]
+.br
+.B python_compiler
+[\fIOPTIONS\fR] \fIINPUT\fR [\-\- \fIPROGRAM_ARGS\fR...]
+.br
+.B pycompile
+.B man
+[\fB\-\-install\fR] [\fB\-\-prefix\fR \fIDIR\fR]
+.SH DESCRIPTION
+.B pycompile
+is an ahead-of-time compiler that translates a supported subset of Python directly into C,
+invokes the platform C compiler, and emits a single standalone native executable. There is no
+interpreter and no runtime dependency: the resulting binary runs on its own.
+.PP
+It is designed for small command-line programs and scripts where you want Python's syntax and
+speed of iteration but a portable native binary as the deliverable.
+.PP
+Two equivalent entry points are provided: the short name
+.B pycompile
+and the long name
+.BR python_compiler .
+Anywhere you can write
+.B pycompile
+you can also write
+.BR python_compiler .
+.SH QUICK START
+.PP
+Compile a single file to a native binary named after the source:
+.PP
+.RS
+.nf
+pycompile hello.py
+.fi
+.RE
+.PP
+Choose an output path explicitly:
+.PP
+.RS
+.nf
+pycompile hello.py \-o build/hello
+.fi
+.RE
+.PP
+Compile and immediately run the program:
+.PP
+.RS
+.nf
+pycompile \-r hello.py
+.fi
+.RE
+.PP
+Compile and also keep the generated C for inspection:
+.PP
+.RS
+.nf
+pycompile hello.py \-\-emit\-c hello.c \-\-keep\-temps
+.fi
+.RE
+.PP
+Compile a whole project directory that contains
+.BR main.py :
+.PP
+.RS
+.nf
+pycompile ./myproject \-o myproject
+.fi
+.RE
+.PP
+Pass arguments to the compiled program after
+.BR \-\- :
+.PP
+.RS
+.nf
+pycompile cli.py \-o cli \-\- \-\-verbose file.txt
+.fi
+.RE
+.SH INPUT
+.TP
+.I INPUT
+A
+.B .py
+file, or a directory containing
+.B main.py
+or
+.BR __main__.py .
+.PP
+When
+.I INPUT
+is a directory,
+.B pycompile
+looks for
+.B main.py
+first, then
+.BR __main__.py ,
+and compiles that file as the program entry point.
+.SH OPTIONS
+.TP
+.BR \-o ", " \-\-output " " \fIPATH\fR
+Output binary path (default: input name without extension).
+.TP
+.B \-\-emit\-c " " \fIPATH\fR
+Also write the generated C source to
+.IR PATH .
+.TP
+.B \-\-keep\-temps
+Keep the temporary C build directory.
+.TP
+.BR \-r ", " \-\-run
+Compile and immediately run the program.
+.TP
+.B \-\-man
+Print this manual to the terminal.
+.TP
+.BR \-h ", " \-\-help
+Print a usage summary and exit.
+.TP
+.BR \-V ", " \-\-version
+Print version information and exit.
+.SH SUBCOMMANDS
+.TP
+.B man
+Print this manual to the terminal.
+.TP
+.B man \-\-install
+Install the man page. May require root privileges.
+.TP
+.B man \-\-prefix " " \fIDIR\fR
+Install into
+.IR DIR /share/man/man1
+instead of
+.IR /usr/local/share/man/man1 .
+.SH LANGUAGE SUPPORT
+The following Python features compile to native code:
+.IP \(bu 2
+Integer, float, string and boolean literals, and
+.BR None .
+.IP \(bu 2
+f-strings with format specs and the
+.B !r
+conversion.
+.IP \(bu 2
+Lists, tuples, sets and dicts, including literal and comprehension forms.
+.IP \(bu 2
+.BR if ", " elif ", " else ", " while ", " for -in ", " break ", " continue ", " pass .
+.IP \(bu 2
+.B def
+with default parameters, recursion, and
+.B *args
+and
+.B **kwargs
+parameters.
+.IP \(bu 2
+Calls with positional, keyword, 
+.B *
+and
+.B **
+arguments.
+.IP \(bu 2
+Chained comparisons,
+.BR in ", " not in ", " is ", " is not ", " and ", " or ", " not .
+.IP \(bu 2
+Slicing and item assignment, augmented assignment.
+.IP \(bu 2
+The
+.B math
+and
+.B sys
+modules.
+.PP
+The following are not yet supported and produce a clear compile error:
+.IP \(bu 2
+.BR class
+definitions, closures and nested scopes.
+.IP \(bu 2
+.BR try ", " except ", " finally ", " with ", " raise .
+.IP \(bu 2
+Decorators,
+.BR lambda
+expressions,
+.B async
+and
+.BR await .
+.IP \(bu 2
+Modules other than
+.B math
+and
+.BR sys .
+.SH RUNTIME MODEL
+The generated C links against a small runtime library that is embedded by the compiler.
+Values are heap-allocated tagged objects. Memory is not garbage collected: allocations live
+until process exit. This keeps the compiler simple and the output small, and is fine for
+typical short-lived CLI programs. Runtime errors print a Python-style traceback to stderr
+and exit with status 1.
+.SH EXAMPLES
+.PP
+Compile a hello-world script:
+.PP
+.RS
+.nf
+pycompile hello.py
+.fi
+.RE
+.PP
+Compile a project entry point to an explicit name:
+.PP
+.RS
+.nf
+pycompile \-o demo app/main.py
+.fi
+.RE
+.PP
+Compile and run with arguments:
+.PP
+.RS
+.nf
+pycompile \-r script.py \-\- 1 2 3
+.fi
+.RE
+.PP
+Keep the generated C source:
+.PP
+.RS
+.nf
+pycompile script.py \-\-emit\-c script.c
+.fi
+.RE
+.SH ENVIRONMENT
+.TP
+.B CC
+Preferred C compiler to invoke. Falls back to
+.BR cc ", " gcc ", " clang ", " tcc ,
+then
+.BR cl .
+.TP
+.B NO_COLOR
+Set to any value to disable ANSI color in the terminal manual.
+.TP
+.B TERM=dumb
+Disables color in the terminal manual.
+.SH EXIT STATUS
+.TP
+.B 0
+Success: the binary was produced, or the compiled program exited 0.
+.TP
+.B 1
+Compile error, or the compiled program exited non-zero.
+.TP
+.B 2
+Command line usage error.
+.SH FILES
+.TP
+.I /usr/local/share/man/man1/pycompile.1
+Installed manual page.
+.TP
+.I /usr/local/share/man/man1/python_compiler.1
+Installed manual page (alias).
+.SH SEE ALSO
+.BR man (1),
+.BR cc (1),
+.BR gcc (1),
+.BR clang (1),
+.BR python3 (1)
+.SH BUGS AND LIMITATIONS
+.IP \(bu 2
+No garbage collection: long-running or memory-heavy loops can grow.
+.IP \(bu 2
+Closures, classes, exceptions and lambdas are not supported yet.
+.IP \(bu 2
+% string formatting is not supported; use f-strings instead.
+.IP \(bu 2
+sort and sorted support reverse and key but are not fully stable when reverse is true.
+.SH AUTHOR
+Written by J.P. Ramackers and contributors. MIT licensed.

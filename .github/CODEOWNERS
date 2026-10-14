@@ -1,0 +1,5 @@
+# Default owners for everything in the repo.
+* @ramackersjp
+
+# Runtime C code benefits from a second pair of eyes.
+/runtime/ @ramackersjp

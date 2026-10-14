@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pycompile — compile Python to native binaries</title>
+  <meta name="description" content="pycompile is an ahead-of-time compiler that turns Python into standalone native executables." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html"><span class="logo"></span> pycompile</a>
+      <nav class="nav">
+        <a href="index.html" class="active">Home</a>
+        <a href="docs.html">Docs</a>
+        <a href="install.html">Install</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/ramackersjp/Python_Compiler">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <span class="badge">Ahead-of-time Python compiler</span>
+      <h1>Write Python.<br />Ship a native binary.</h1>
+      <p class="lead">
+        <strong>pycompile</strong> (also installed as <code>python_compiler</code>) translates a
+        supported subset of Python straight into C, invokes your system C compiler, and emits a
+        single standalone executable. No interpreter. No runtime to install.
+      </p>
+      <div class="btns">
+        <a class="btn btn-primary" href="download.html">Download</a>
+        <a class="btn btn-ghost" href="install.html">Install from source</a>
+        <a class="btn btn-ghost" href="docs.html">Read the docs</a>
+      </div>
+
+      <div class="code-window">
+        <div class="titlebar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="title">bash</span>
+        </div>
+        <pre><code><span class="tok-c"># Compile a script into a native binary</span>
+<span class="tok-k">pycompile</span> hello.py <span class="tok-f">-o</span> hello
+
+<span class="tok-c"># Run it — no Python required on the target machine</span>
+<span class="tok-k">./hello</span>
+<span class="tok-o">Hello, World!</span>
+
+<span class="tok-c"># Read the full manual right in your terminal</span>
+<span class="tok-k">pycompile man</span></code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="container">
+      <h2>Why pycompile?</h2>
+      <p class="sub">Python's ergonomics, a native binary's portability.</p>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Ahead of time</h3>
+          <p>Source is translated to C and compiled by <code>cc</code>, <code>gcc</code>,
+          <code>clang</code> or MSVC. What you ship is a real executable.</p>
+        </div>
+        <div class="card">
+          <h3>No runtime</h3>
+          <p>The generated program links a tiny embedded runtime. Targets need nothing
+          installed — not even Python.</p>
+        </div>
+        <div class="card">
+          <h3>Small and fast</h3>
+          <p>Release builds use link-time optimization and stripping. Binaries are compact
+          and start instantly.</p>
+        </div>
+        <div class="card">
+          <h3>Familiar syntax</h3>
+          <p>Functions, defaults, <code>*args</code>/<code>**kwargs</code>, f-strings,
+          comprehensions, dictionaries, sets and more all compile.</p>
+        </div>
+        <div class="card">
+          <h3>Clear errors</h3>
+          <p>Unsupported constructs fail at compile time with a file, line and column —
+          never a surprise at runtime.</p>
+        </div>
+        <div class="card">
+          <h3>Built-in manual</h3>
+          <p>Run <code>pycompile man</code> for a full terminal manual, or install a real
+          <code>man(1)</code> page.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2>Install in minutes</h2>
+      <p class="sub">Requires Rust and a C compiler. Pick the path that fits you.</p>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>With Cargo</h3>
+          <pre style="background:var(--code-bg);color:var(--code-text);padding:14px;border-radius:10px;overflow-x:auto;"><code>cargo install python-compiler</code></pre>
+          <p class="mt-16">Installs <code>pycompile</code> and <code>python_compiler</code>
+          into <code>~/.cargo/bin</code>.</p>
+          <a class="btn btn-dark mt-16" href="install.html">Full install guide</a>
+        </div>
+        <div class="card">
+          <h3>From source</h3>
+          <pre style="background:var(--code-bg);color:var(--code-text);padding:14px;border-radius:10px;overflow-x:auto;"><code>git clone https://github.com/ramackersjp/Python_Compiler
+cd Python_Compiler
+cargo build --release</code></pre>
+          <p class="mt-16">Binaries land in <code>target/release/</code>. See also
+          <a href="install.html#man">installing the man page</a>.</p>
+          <a class="btn btn-dark mt-16" href="download.html">Download a release</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="container">
+      <h2>Start compiling today</h2>
+      <p>Clone the repository, build once, and turn your scripts into portable executables.</p>
+      <a class="btn btn-primary" href="https://github.com/ramackersjp/Python_Compiler">View on GitHub</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>
+        <span class="brand" style="font-size:17px;"><span class="logo"></span> pycompile</span>
+        <div class="mt-8">Compile Python to native binaries. MIT licensed.</div>
+      </div>
+      <div>
+        <a href="docs.html">Docs</a> ·
+        <a href="install.html">Install</a> ·
+        <a href="download.html">Download</a> ·
+        <a href="pycompile.1">man page</a> ·
+        <a href="https://github.com/ramackersjp/Python_Compiler">GitHub</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

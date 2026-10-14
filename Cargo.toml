@@ -1,0 +1,26 @@
+[package]
+name = "python-compiler"
+version = "0.1.0"
+edition = "2021"
+description = "Compile Python source files into standalone native binaries"
+license = "MIT"
+repository = "https://github.com/ramackersjp/Python_Compiler"
+readme = "README.md"
+default-run = "pycompile"
+
+[lib]
+name = "python_compiler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "pycompile"
+path = "src/main.rs"
+
+[[bin]]
+name = "python_compiler"
+path = "src/bin/python_compiler.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

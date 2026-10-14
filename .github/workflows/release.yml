@@ -1,0 +1,106 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu, ext: tar.gz }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, ext: tar.gz }
+          - { os: macos-13, target: x86_64-apple-darwin, ext: tar.gz }
+          - { os: macos-latest, target: aarch64-apple-darwin, ext: tar.gz }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, ext: zip }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -e
+          dir="pycompile-${{ matrix.target }}"
+          mkdir -p "$dir"
+          cp "target/${{ matrix.target }}/release/pycompile" "$dir/"
+          cp "target/${{ matrix.target }}/release/python_compiler" "$dir/"
+          cp LICENSE README.md docs/pycompile.1 "$dir/"
+          tar -czf "pycompile-${{ matrix.target }}.tar.gz" "$dir"
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = "pycompile-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/pycompile.exe" $dir
+          Copy-Item "target/${{ matrix.target }}/release/python_compiler.exe" $dir
+          Copy-Item LICENSE, README.md, docs/pycompile.1 $dir
+          Compress-Archive -Path $dir -DestinationPath "pycompile-${{ matrix.target }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.target }}
+          path: pycompile-${{ matrix.target }}.${{ matrix.ext }}
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum pycompile-* > SHA256SUMS
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: pycompile ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            dist/pycompile-*.tar.gz
+            dist/pycompile-*.zip
+            dist/SHA256SUMS
+          body: |
+            Native binaries for **pycompile** (also installed as `python_compiler`).
+
+            Extract the archive for your platform, put both binaries on your `PATH`, then:
+
+            ```
+            pycompile --version
+            pycompile man
+            sudo pycompile man --install   # optional, installs man pycompile
+            ```
+
+            Verify downloads against `SHA256SUMS`. See the [documentation site](https://ramackersjp.github.io/Python_Compiler/) for the full manual.

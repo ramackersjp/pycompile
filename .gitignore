@@ -1,0 +1,19 @@
+# Rust build output
+/target/
+
+# Generated C / binaries produced while compiling user programs
+*.c.tmp
+/pycompile
+*.exe
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/

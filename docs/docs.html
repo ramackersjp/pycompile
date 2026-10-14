@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Documentation — pycompile</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="index.html"><span class="logo"></span> pycompile</a>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+        <a href="docs.html" class="active">Docs</a>
+        <a href="install.html">Install</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/ramackersjp/Python_Compiler">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container docs-layout">
+    <aside class="docs-nav" id="docsNav">
+      <a href="#overview">Overview</a>
+      <a href="#usage">Usage</a>
+      <a href="#options">Options</a>
+      <a href="#subcommands">Subcommands</a>
+      <a href="#language">Language support</a>
+      <a href="#runtime">Runtime model</a>
+      <a href="#environment">Environment</a>
+      <a href="#exit">Exit status</a>
+      <a href="#files">Files</a>
+      <a href="#examples">Examples</a>
+      <a href="#limitations">Limitations</a>
+      <a href="#see-also">See also</a>
+    </aside>
+
+    <main class="docs-content">
+      <h1>Documentation</h1>
+      <p class="muted">Everything you need to use <code>pycompile</code>. The same content is
+      available as a man page: <code>man pycompile</code> or <code>pycompile man</code>.</p>
+
+      <h2 id="overview">Overview</h2>
+      <p><strong>pycompile</strong> is an ahead-of-time compiler that translates a supported
+      subset of Python into C, invokes the platform C compiler, and emits a single standalone
+      native executable. There is no interpreter and no runtime dependency at run time.</p>
+      <p>It targets small command-line programs and scripts where you want Python's syntax and
+      iteration speed, but a portable native binary as the deliverable.</p>
+      <p>Two equivalent entry points are installed: the short name <code>pycompile</code> and
+      the long name <code>python_compiler</code>. Anywhere you can write one you can write the
+      other.</p>
+
+      <h2 id="usage">Usage</h2>
+      <pre><code>pycompile [OPTIONS] &lt;INPUT&gt; [-- PROGRAM_ARGS...]
+python_compiler [OPTIONS] &lt;INPUT&gt; [-- PROGRAM_ARGS...]
+pycompile man [--install] [--prefix DIR]</code></pre>
+      <p><code>&lt;INPUT&gt;</code> is a <code>.py</code> file, or a directory containing
+      <code>main.py</code> or <code>__main__.py</code>. When it is a directory,
+      <code>pycompile</code> looks for <code>main.py</code> first, then
+      <code>__main__.py</code>, and compiles that file as the entry point.</p>
+
+      <h2 id="options">Options</h2>
+      <table>
+        <thead><tr><th>Option</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>-o, --output &lt;PATH&gt;</code></td><td>Output binary path. Default: the input name without extension.</td></tr>
+          <tr><td><code>--emit-c &lt;PATH&gt;</code></td><td>Also write the generated C source to <code>PATH</code>.</td></tr>
+          <tr><td><code>--keep-temps</code></td><td>Keep the temporary C build directory.</td></tr>
+          <tr><td><code>-r, --run</code></td><td>Compile and immediately run the program.</td></tr>
+          <tr><td><code>--man</code></td><td>Print the full manual to the terminal.</td></tr>
+          <tr><td><code>-h, --help</code></td><td>Print a usage summary and exit.</td></tr>
+          <tr><td><code>-V, --version</code></td><td>Print version information and exit.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="subcommands">Subcommands</h2>
+      <table>
+        <thead><tr><th>Subcommand</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>man</code></td><td>Print the manual to the terminal.</td></tr>
+          <tr><td><code>man --install</code></td><td>Install the man page. May require root.</td></tr>
+          <tr><td><code>man --prefix DIR</code></td><td>Install into <code>DIR/share/man/man1</code> instead of <code>/usr/local/share/man/man1</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="language">Language support</h2>
+      <h3>Compiles to native code</h3>
+      <ul>
+        <li>Integer, float, string and boolean literals, and <code>None</code></li>
+        <li>f-strings with format specs and the <code>!r</code> conversion</li>
+        <li>Lists, tuples, sets and dicts, including literal and comprehension forms</li>
+        <li><code>if</code> / <code>elif</code> / <code>else</code>, <code>while</code>,
+        <code>for</code>-in (with <code>else</code>), <code>break</code>,
+        <code>continue</code>, <code>pass</code></li>
+        <li><code>def</code> with default parameters, recursion, and <code>*args</code> /
+        <code>**kwargs</code> parameters</li>
+        <li>Calls with positional, keyword, <code>*</code> and <code>**</code> arguments</li>
+        <li>Chained comparisons, <code>in</code> / <code>not in</code>, <code>is</code> /
+        <code>is not</code>, <code>and</code>, <code>or</code>, <code>not</code></li>
+        <li>Slicing and item assignment, augmented assignment</li>
+        <li>The <code>math</code> and <code>sys</code> modules</li>
+      </ul>
+
+      <h3>Not yet supported</h3>
+      <div class="note">
+        These produce a clear compile-time error rather than silent misbehaviour:
+      </div>
+      <ul>
+        <li><code>class</code> definitions, closures and nested scopes</li>
+        <li><code>try</code> / <code>except</code> / <code>finally</code>, <code>with</code>,
+        <code>raise</code></li>
+        <li>Decorators, <code>lambda</code> expressions, <code>async</code> and
+        <code>await</code></li>
+        <li>Modules other than <code>math</code> and <code>sys</code></li>
+      </ul>
+
+      <h2 id="runtime">Runtime model</h2>
+      <p>The generated C links against a small runtime library that is embedded by the
+      compiler. Values are heap-allocated tagged objects.</p>
+      <div class="note">
+        Memory is <strong>not</strong> garbage collected: allocations live until process
+        exit. This keeps the compiler simple and the output small, and is fine for typical
+        short-lived CLI programs.
+      </div>
+      <p>Runtime errors (for example, a missing argument or an out-of-range operation) print a
+      Python-style traceback to stderr and exit with status 1.</p>
+
+      <h2 id="environment">Environment</h2>
+      <table>
+        <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>CC</code></td><td>Preferred C compiler. Falls back to <code>cc</code>, <code>gcc</code>, <code>clang</code>, <code>tcc</code>, then <code>cl</code>.</td></tr>
+          <tr><td><code>NO_COLOR</code></td><td>Set to any value to disable ANSI color in the terminal manual.</td></tr>
+          <tr><td><code>TERM=dumb</code></td><td>Disables color in the terminal manual.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="exit">Exit status</h2>
+      <table>
+        <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>0</code></td><td>Success: the binary was produced, or the compiled program exited 0.</td></tr>
+          <tr><td><code>1</code></td><td>Compile error, or the compiled program exited non-zero.</td></tr>
+          <tr><td><code>2</code></td><td>Command line usage error.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="files">Files</h2>
+      <table>
+        <thead><tr><th>Path</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>/usr/local/share/man/man1/pycompile.1</code></td><td>Installed manual page.</td></tr>
+          <tr><td><code>/usr/local/share/man/man1/python_compiler.1</code></td><td>Installed manual page (alias).</td></tr>
+          <tr><td><code>&lt;prefix&gt;/share/man/man1/</code></td><td>Location when <code>--prefix</code> is used.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="examples">Examples</h2>
+      <pre><code><span class="tok-c"># Compile a single file</span>
+pycompile hello.py
+
+<span class="tok-c"># Choose an output path</span>
+pycompile hello.py -o build/hello
+
+<span class="tok-c"># Compile and immediately run</span>
+pycompile -r hello.py
+
+<span class="tok-c"># Keep the generated C for inspection</span>
+pycompile hello.py --emit-c hello.c --keep-temps
+
+<span class="tok-c"># Compile a project directory</span>
+pycompile ./myproject -o myproject
+
+<span class="tok-c"># Pass arguments to the compiled program</span>
+pycompile cli.py -o cli -- --verbose file.txt</code></pre>
+
+      <h2 id="limitations">Limitations</h2>
+      <ul>
+        <li>No garbage collection: long-running or memory-heavy loops can grow.</li>
+        <li>Closures, classes, exceptions and <code>lambda</code> are not supported yet.</li>
+        <li><code>%</code> string formatting is not supported; use f-strings instead.</li>
+        <li><code>sort</code>/<code>sorted</code> support <code>reverse</code> and
+        <code>key</code> but are not fully stable when <code>reverse=True</code>.</li>
+      </ul>
+
+      <h2 id="see-also">See also</h2>
+      <p><code>man(1)</code>, <code>cc(1)</code>, <code>gcc(1)</code>, <code>clang(1)</code>,
+      <code>python3(1)</code> — and the <a href="pycompile.1">raw man page</a> on this site.</p>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div>
+        <span class="brand" style="font-size:17px;"><span class="logo"></span> pycompile</span>
+        <div class="mt-8">Compile Python to native binaries. MIT licensed.</div>
+      </div>
+      <div>
+        <a href="docs.html">Docs</a> ·
+        <a href="install.html">Install</a> ·
+        <a href="download.html">Download</a> ·
+        <a href="https://github.com/ramackersjp/Python_Compiler">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const links = Array.from(document.querySelectorAll('#docsNav a'));
+    const ids = links.map((a) => a.getAttribute('href').slice(1));
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          links.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    ids.forEach((id) => { const el = document.getElementById(id); if (el) obs.observe(el); });
+  </script>
+</body>
+</html>

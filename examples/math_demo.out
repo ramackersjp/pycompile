@@ -1,0 +1,9 @@
+pi = 3.141593
+e  = 2.718282
+sqrt(2) = 1.414214
+distance = 5.0
+floor/ceil: 3 4
+factorial(5) = 120
+gcd(48, 36) = 12
+hypot(3, 4) = 5.0
+log10(1000) = 3.0
