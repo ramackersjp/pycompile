@@ -1,0 +1,31 @@
+app-id: io.github.ramackersjp.pycompile
+runtime: org.freedesktop.Sdk
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: pycompile
+finish-args:
+  - --share=network
+  - --filesystem=home
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/pycompile/cargo
+modules:
+  - name: pycompile
+    buildsystem: simple
+    build-commands:
+      - cargo --offline build --release
+      - install -Dm755 target/release/pycompile /app/bin/pycompile
+      - install -Dm755 target/release/python_compiler /app/bin/python_compiler
+      - install -Dm644 docs/pycompile.1 /app/share/man/man1/pycompile.1
+      - install -Dm644 docs/pycompile.1 /app/share/man/man1/python_compiler.1
+      - install -Dm644 packaging/flatpak/io.github.ramackersjp.pycompile.metainfo.xml
+        /app/share/metainfo/io.github.ramackersjp.pycompile.metainfo.xml
+      - install -Dm644 packaging/flatpak/io.github.ramackersjp.pycompile.desktop
+        /app/share/applications/io.github.ramackersjp.pycompile.desktop
+    sources:
+      - type: archive
+        url: https://github.com/ramackersjp/pycompile/archive/refs/tags/v0.1.0.tar.gz
+        sha256: 593632de438e1cbb5b0a91ab190035790557f0d850a1b44d940e58d45b325f78

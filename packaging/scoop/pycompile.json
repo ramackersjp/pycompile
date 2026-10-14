@@ -1,0 +1,31 @@
+{
+    "$schema": "https://raw.githubusercontent.com/ScoopInstaller/Scoop/master/schema.json",
+    "version": "0.1.0",
+    "description": "Compile Python source files into standalone native binaries",
+    "homepage": "https://github.com/ramackersjp/pycompile",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-x86_64-pc-windows-msvc.zip",
+            "hash": "4888cfa1b884250af98321779d4e2d8085588a762f8c322b86d0921186a6432a",
+            "extract_dir": "pycompile-x86_64-pc-windows-msvc"
+        }
+    },
+    "bin": [
+        "pycompile.exe",
+        [
+            "python_compiler.exe",
+            "python_compiler"
+        ]
+    ],
+    "checkver": {
+        "github": "https://github.com/ramackersjp/pycompile"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/ramackersjp/pycompile/releases/download/v$version/pycompile-x86_64-pc-windows-msvc.zip"
+            }
+        }
+    }
+}

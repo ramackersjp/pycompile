@@ -1,0 +1,35 @@
+name: pycompile
+base: core24
+version: '0.1.0'
+summary: Compile Python source files into standalone native binaries
+description: |
+  pycompile is an ahead-of-time compiler that translates a supported subset of
+  Python into C, invokes the system C compiler, and emits a single standalone
+  native executable. No interpreter is required at run time.
+
+  Installing this snap provides two equivalent commands, pycompile and
+  python_compiler.
+grade: stable
+confinement: classic
+license: MIT
+website: https://github.com/ramackersjp/pycompile
+source-code: https://github.com/ramackersjp/pycompile
+issues: https://github.com/ramackersjp/pycompile/issues
+contact: jramackers@proton.me
+
+parts:
+  pycompile:
+    plugin: rust
+    source: https://github.com/ramackersjp/pycompile.git
+    source-tag: v0.1.0
+    build-packages:
+      - gcc
+    stage-packages:
+      - gcc
+      - libc6-dev
+
+apps:
+  pycompile:
+    command: bin/pycompile
+  python_compiler:
+    command: bin/python_compiler

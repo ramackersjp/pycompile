@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=pycompile
+Comment=Compile Python source files into standalone native binaries
+Exec=pycompile %u
+Terminal=true
+Type=Application
+Categories=Development;
