@@ -44,10 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependabot configuration for Cargo and GitHub Actions dependencies.
 - OS packaging: `.deb` and `.rpm` packages are built and attached to each release
   (`Cargo.toml` metadata, `.github/workflows/release.yml`).
-- Install channels documented in the README and install page: `.deb`, `.rpm`, AUR,
-  Snap, Flatpak, Homebrew, Scoop, winget, Cargo and prebuilt archives.
+- Install channels documented in the README and install page: `.deb`, `.rpm`,
+  Homebrew, Scoop, Cargo and prebuilt archives (AUR, Snap and winget are prepared and
+  listed as pending first publication).
 - Packaging manifests under `packaging/` and `snap/` for AUR, Flatpak, Homebrew,
-  Scoop, winget and Snap.
+  Scoop, winget and Snap. The Flatpak manifest is provided for self-build only:
+  Flathub is not used because the sandbox has no C compiler for pycompile to invoke.
 
 ### Fixed
 

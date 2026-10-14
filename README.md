@@ -125,14 +125,16 @@ pycompile is available through the following channels:
 | --- | --- |
 | Debian / Ubuntu (`.deb`) | `sudo apt install ./pycompile_*_amd64.deb` |
 | Fedora / RHEL / openSUSE (`.rpm`) | `sudo dnf install ./pycompile-*.x86_64.rpm` |
-| Arch Linux (AUR) | `yay -S pycompile` (or `paru -S pycompile`) |
-| Linux (Snap) | `sudo snap install pycompile` |
-| Linux (Flatpak) | `flatpak install flathub io.github.ramackersjp.pycompile` |
 | macOS (Homebrew) | `brew install ramackersjp/tap/pycompile` |
-| Windows (Scoop) | `scoop bucket add ramackersjp https://github.com/ramackersjp/scoop-bucket`<br>`scoop install pycompile` |
-| Windows (winget) | `winget install ramackersjp.pycompile` |
+| Windows (Scoop) | `scoop bucket add ramackersjp https://github.com/ramackersjp/scoop-bucket`, then `scoop install pycompile` |
 | Rust toolchain (Cargo) | `cargo install python-compiler` |
 | Prebuilt binaries | `.tar.gz` / `.zip` from the [releases page](https://github.com/ramackersjp/pycompile/releases) |
+
+In review / pending first publication:
+
+- Arch Linux (AUR): `yay -S pycompile` (or `paru -S pycompile`); PKGBUILD in [`packaging/aur/`](packaging/aur/).
+- Linux (Snap): `sudo snap install pycompile`; `snap/snapcraft.yaml`.
+- Windows (winget): `winget install ramackersjp.pycompile`; manifests in [`packaging/winget/`](packaging/winget/).
 
 On Windows, `pycompile` needs a C compiler to produce binaries: install MSVC Build
 Tools, or use MinGW-w64 / LLVM (`clang`). This requirement applies only when you
