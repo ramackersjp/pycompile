@@ -96,7 +96,12 @@ pub fn build(module: &Module, source_file: &str, opts: &BuildOptions) -> Result<
         std::fs::write(path, &c_source).map_err(io_err(source_file))?;
     }
 
-    let output = with_exe(&opts.output);
+    let mut output = with_exe(&opts.output);
+    if output.is_relative() {
+        if let Ok(cwd) = std::env::current_dir() {
+            output = cwd.join(output);
+        }
+    }
     if let Some(parent) = output.parent() {
         if !parent.as_os_str().is_empty() {
             std::fs::create_dir_all(parent).ok();

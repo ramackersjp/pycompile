@@ -45,6 +45,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Packaging and platform notes (Linux/macOS/Windows distribution status and planned
   OS packages) in the README and install page.
 
+### Fixed
+
+- Relative output paths (for example `pycompile prog.py -o prog`) now write the binary
+  into the caller's working directory instead of the temporary build directory, which
+  was deleted afterwards. Output paths are resolved to absolute before invoking the C
+  compiler (`src/driver.rs`).
+
 ### Notes and limitations
 
 - No garbage collection: allocations are not reclaimed until process exit.

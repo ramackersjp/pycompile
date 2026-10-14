@@ -93,6 +93,32 @@ fn args() {
 }
 
 #[test]
+fn relative_output_path_lands_in_cwd() {
+    let bin = env!("CARGO_BIN_EXE_pycompile");
+    let dir = out_dir().join("rel");
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(dir.join("prog.py"), "print(1 + 2)\n").unwrap();
+    let status = Command::new(bin)
+        .current_dir(&dir)
+        .args(["prog.py", "-o", "prog"])
+        .status()
+        .expect("failed to launch compiler");
+    assert!(status.success(), "compiler reported failure");
+    let exe = if cfg!(windows) {
+        dir.join("prog.exe")
+    } else {
+        dir.join("prog")
+    };
+    assert!(
+        exe.exists(),
+        "relative -o output was not created in the working directory"
+    );
+    let out = Command::new(&exe).output().expect("failed to run binary");
+    assert_eq!(String::from_utf8_lossy(&out.stdout), "3\n");
+}
+
+#[test]
 fn unsupported_constructs_report_errors() {
     let bin = env!("CARGO_BIN_EXE_pycompile");
     for (src, expect) in [
