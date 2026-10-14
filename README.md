@@ -133,7 +133,7 @@ pycompile is available through the following channels:
 In review / pending first publication:
 
 - Arch Linux (AUR): `yay -S pycompile` (or `paru -S pycompile`); PKGBUILD in [`packaging/aur/`](packaging/aur/).
-- Linux (Snap): `sudo snap install pycompile`; `snap/snapcraft.yaml`.
+- Linux (Snap): `sudo snap install python-compiler`; `snap/snapcraft.yaml`.
 - Windows (winget): `winget install ramackersjp.pycompile`; manifests in [`packaging/winget/`](packaging/winget/).
 
 On Windows, `pycompile` needs a C compiler to produce binaries: install MSVC Build

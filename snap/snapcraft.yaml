@@ -1,4 +1,4 @@
-name: pycompile
+name: python-compiler
 base: core24
 version: '0.1.0'
 summary: Compile Python source files into standalone native binaries

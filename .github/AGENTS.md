@@ -125,7 +125,7 @@ Required repository secrets (never commit keys or tokens to git):
 - `AUR_SSH_PRIVATE_KEY`: an SSH private key whose public key is registered in the AUR
   account. Used only by the `aur` job.
 - `SNAPCRAFT_STORE_CREDENTIALS`: optional; the output of
-  `snapcraft export-login --snaps pycompile --acls package_access,package_push,package_update,package_release -`
+  `snapcraft export-login --snaps python-compiler --acls package_access,package_push,package_update,package_release -`
   for the Snap Store account. Without it the `snap` job is skipped. Snap classic
   confinement requires Snap Store approval before a `stable` release.
 
