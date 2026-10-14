@@ -103,4 +103,4 @@ jobs:
             sudo pycompile man --install   # optional, installs man pycompile
             ```
 
-            Verify downloads against `SHA256SUMS`. See the [documentation site](https://ramackersjp.github.io/Python_Compiler/) for the full manual.
+            Verify downloads against `SHA256SUMS`. See the [repository](https://github.com/ramackersjp/Python_Compiler) and `pycompile man` for the full manual.

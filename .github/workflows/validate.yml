@@ -81,3 +81,12 @@ jobs:
           for f in docs/index.html docs/docs.html docs/install.html docs/download.html docs/style.css docs/pycompile.1; do
             test -f "$f"
           done
+
+      - name: Check Vercel configuration
+        run: |
+          python3 - <<'PY'
+          import json
+          cfg = json.load(open("vercel.json"))
+          assert cfg.get("outputDirectory") == "docs", cfg
+          assert cfg.get("buildCommand") is None, cfg
+          PY

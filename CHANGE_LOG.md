@@ -33,12 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/pycompile.1`).
 - `key` and `reverse` support for `sorted()` and `list.sort()`, including first-class
   references to common builtins such as `len`, `str`, `int` and `abs`.
-- GitHub Pages documentation site with install and download instructions (`docs/`).
+- Static documentation site with install and download instructions (`docs/`), deployed
+  to Vercel with zero configuration (`vercel.json`: no build step, `outputDirectory`
+  set to `docs`).
 - Example programs with recorded expected output (`examples/`).
 - Integration tests that compile and run every example and compare output
   (`tests/integration.rs`).
-- CI workflows: validate (format/lint/build/test/examples/man page/site), Pages
-  deployment, and release binary builds (`.github/workflows/`).
+- CI workflows: validate (format/lint/build/test/examples/man page/site) and release
+  binary builds (`.github/workflows/`).
 - Dependabot configuration for Cargo and GitHub Actions dependencies.
 - Packaging and platform notes (Linux/macOS/Windows distribution status and planned
   OS packages) in the README and install page.

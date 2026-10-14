@@ -17,7 +17,7 @@ Hello, World!
 
 - Full manual in the terminal: `pycompile man`
 - Installed man page: `man pycompile` (after `sudo pycompile man --install`)
-- Website with docs, download and install: <https://ramackersjp.github.io/Python_Compiler/>
+- Website source (docs, install and download pages): [`docs/`](docs/)
 
 ## Install
 
@@ -135,6 +135,18 @@ Packaging for OS package managers is not published yet:
 On Windows the compiler needs a C compiler to produce binaries (MSVC Build Tools,
 MinGW-w64, or LLVM/clang); this requirement applies only when invoking pycompile, not
 to the compiler binary itself.
+
+## Website
+
+The static documentation site lives in [`docs/`](docs/) (plain HTML/CSS, no build
+step). It deploys to [Vercel](https://vercel.com) with no configuration:
+
+1. Import this repository in Vercel ("Add New… → Project").
+2. Keep the defaults — `vercel.json` sets `outputDirectory` to `docs` and skips the
+   build step.
+3. Deploy.
+
+Any other static host works too: serve the contents of `docs/` as-is.
 
 ## Development
 

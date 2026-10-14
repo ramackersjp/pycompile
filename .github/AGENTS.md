@@ -76,11 +76,13 @@ cargo run -- examples/hello.py -o /tmp/hello && /tmp/hello
 5. Add/extend a test in `tests/integration.rs`.
 6. Update `docs/`, the man page `docs/pycompile.1`, and `CHANGE_LOG.md`.
 
-## GitHub Pages site
+## Website
 
-Static site lives in `docs/` and is deployed by `.github/workflows/pages.yml`.
-Pages: `index.html`, `docs.html`, `install.html`, `download.html`, shared
-`style.css`, plus `pycompile.1`.
+The static site lives in `docs/` and is deployed to Vercel. `vercel.json` at the
+repository root serves `docs/` as-is (`buildCommand: null`, `outputDirectory: "docs"`).
+Pages: `index.html`, `docs.html`, `install.html`, `download.html`, shared `style.css`,
+plus `pycompile.1`. There is no GitHub Pages workflow (Pages requires a paid plan for
+private repositories).
 
 ## Release
 
