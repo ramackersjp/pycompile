@@ -108,9 +108,9 @@ and can be re-run with `workflow_dispatch` and a `tag` input):
 - `aur` job: clones the AUR repository `ssh://aur@aur.archlinux.org/pycompile.git`,
   bumps `pkgver`/`pkgrel`, updates `sha256sums` from the release tag tarball, rewrites
   the matching fields in `.SRCINFO`, and pushes.
-- `snap` job: builds `snap/snapcraft.yaml` with `snapcore/action-build` and publishes
-  with `snapcore/action-publish`. It is skipped unless the store credential secret is
-  set.
+- `snap` job: builds `snap/snapcraft.yaml` with `snapcore/action-build`, then uploads and
+  releases to the `stable` channel with `snapcore/action-publish`. It is skipped unless
+  the store credential secret is set.
 
 All jobs are idempotent: when nothing changes they skip the commit and push. To bump
 the AUR package for a version, keep `PKGBUILD` and `.SRCINFO` in step with the fields
