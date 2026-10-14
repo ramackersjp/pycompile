@@ -96,5 +96,16 @@ page links to these assets.
 OS package definitions live under `packaging/` (AUR, Flatpak, Homebrew, Scoop, winget)
 and `snap/` (Snap). `.deb` and `.rpm` are built in the release workflow from
 `[package.metadata.deb]` and `[package.metadata.generate-rpm]` in `Cargo.toml` and
-attached to the release. After a release, the Homebrew formula, Scoop manifest and
-winget manifests must be refreshed with the new asset URLs and SHA-256 hashes.
+attached to the release.
+
+After a successful release, `.github/workflows/packages.yml` runs (via `workflow_run`,
+and can be re-run with `workflow_dispatch` and a `tag` input). It downloads the
+release `SHA256SUMS`, renders the templates in `.github/packages/` with the new version
+and hashes, and pushes the results to the `ramackersjp/homebrew-tap` (Homebrew) and
+`ramackersjp/scoop-bucket` (Scoop) repositories, then opens a winget PR with
+`vedantmgoyal9/winget-releaser`.
+
+This requires a repository secret `PACKAGES_TOKEN`: a **classic** PAT with the `repo`
+and `workflow` scopes, owned by the account that holds the `microsoft/winget-pkgs`
+fork. The winget step is `continue-on-error` until the first version of `pycompile`
+is accepted into `winget-pkgs`.

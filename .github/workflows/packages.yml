@@ -1,0 +1,143 @@
+name: packages
+
+on:
+  workflow_run:
+    workflows: ["release"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (for example v0.1.0)"
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  REPO: ramackersjp/pycompile
+  TAP: ramackersjp/homebrew-tap
+  BUCKET: ramackersjp/scoop-bucket
+
+jobs:
+  update:
+    name: Update package manifests
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${{ github.event.workflow_run.head_branch }}"
+          fi
+          case "$tag" in
+            v[0-9]*) ;;
+            *) echo "::error::expected a v* release tag, got '$tag'"; exit 1 ;;
+          esac
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p sums
+          for attempt in 1 2 3 4 5; do
+            if gh release download "${{ steps.tag.outputs.tag }}" \
+                 --repo "$REPO" --pattern SHA256SUMS --dir sums --clobber; then
+              break
+            fi
+            echo "release assets not ready (attempt $attempt), retrying in 15s"
+            sleep 15
+          done
+          test -s sums/SHA256SUMS
+
+      - name: Check publishing token
+        env:
+          TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::PACKAGES_TOKEN is not set (needs a classic PAT with repo and workflow scopes)"
+            exit 1
+          fi
+
+      - name: Publish Homebrew and Scoop manifests
+        env:
+          TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.tag.outputs.version }}"
+
+          declare -A sums
+          while read -r hash file; do
+            sums["${file#./}"]="$hash"
+          done < sums/SHA256SUMS
+
+          need() {
+            local value="${sums[$1]:-}"
+            if [ -z "$value" ]; then
+              echo "::error::missing checksum for $1"
+              exit 1
+            fi
+            printf '%s' "$value"
+          }
+
+          mc_arm="$(need pycompile-aarch64-apple-darwin.tar.gz)"
+          mc_intel="$(need pycompile-x86_64-apple-darwin.tar.gz)"
+          lnx_arm="$(need pycompile-aarch64-unknown-linux-gnu.tar.gz)"
+          lnx_intel="$(need pycompile-x86_64-unknown-linux-gnu.tar.gz)"
+          win="$(need pycompile-x86_64-pc-windows-msvc.zip)"
+
+          export GIT_TERMINAL_PROMPT=0
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${TAP}.git" tap
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${BUCKET}.git" bucket
+
+          mkdir -p tap/Formula
+          sed \
+            -e "s/@VERSION@/${version}/g" \
+            -e "s/@SHA_MACOS_ARM@/${mc_arm}/" \
+            -e "s/@SHA_MACOS_INTEL@/${mc_intel}/" \
+            -e "s/@SHA_LINUX_ARM@/${lnx_arm}/" \
+            -e "s/@SHA_LINUX_INTEL@/${lnx_intel}/" \
+            .github/packages/pycompile.rb.tpl > tap/Formula/pycompile.rb
+          sed \
+            -e "s/@VERSION@/${version}/g" \
+            -e "s/@SHA_WINDOWS@/${win}/" \
+            .github/packages/pycompile.json.tpl > bucket/pycompile.json
+
+          git -C tap config user.name "github-actions[bot]"
+          git -C tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C tap add Formula/pycompile.rb
+          if ! git -C tap diff --cached --quiet; then
+            git -C tap commit -m "pycompile ${version}"
+            git -C tap push
+          fi
+
+          git -C bucket config user.name "github-actions[bot]"
+          git -C bucket config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C bucket add pycompile.json
+          if ! git -C bucket diff --cached --quiet; then
+            git -C bucket commit -m "pycompile ${version}"
+            git -C bucket push
+          fi
+
+      - name: Publish to winget
+        # winget-pkgs needs at least one published version before this can open a PR
+        continue-on-error: true
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: ramackersjp.pycompile
+          version: ${{ steps.tag.outputs.version }}
+          installers-regex: '\.zip$'
+          release-repository: ramackersjp/pycompile
+          release-tag: ${{ steps.tag.outputs.tag }}
+          token: ${{ secrets.PACKAGES_TOKEN }}
