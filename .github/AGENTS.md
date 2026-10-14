@@ -108,8 +108,11 @@ and can be re-run with `workflow_dispatch` and a `tag` input):
 - `aur` job: clones the AUR repository `ssh://aur@aur.archlinux.org/pycompile.git`,
   bumps `pkgver`/`pkgrel`, updates `sha256sums` from the release tag tarball, rewrites
   the matching fields in `.SRCINFO`, and pushes.
+- `snap` job: builds `snap/snapcraft.yaml` with `snapcore/action-build` and publishes
+  with `snapcore/action-publish`. It is skipped unless the store credential secret is
+  set.
 
-Both jobs are idempotent: when nothing changes they skip the commit and push. To bump
+All jobs are idempotent: when nothing changes they skip the commit and push. To bump
 the AUR package for a version, keep `PKGBUILD` and `.SRCINFO` in step with the fields
 the workflow rewrites; do not hand-edit them unless you also update the workflow.
 
@@ -121,3 +124,19 @@ Required repository secrets (never commit keys or tokens to git):
   `winget-pkgs`.
 - `AUR_SSH_PRIVATE_KEY`: an SSH private key whose public key is registered in the AUR
   account. Used only by the `aur` job.
+- `SNAPCRAFT_STORE_CREDENTIALS`: optional; the output of
+  `snapcraft export-login --snaps pycompile --acls package_access,package_push,package_update,package_release -`
+  for the Snap Store account. Without it the `snap` job is skipped. Snap classic
+  confinement requires Snap Store approval before a `stable` release.
+
+### Rotating the AUR deploy key
+
+The `aur` job authenticates with the `AUR_SSH_PRIVATE_KEY` secret.
+
+1. Generate a new key: `ssh-keygen -t ed25519 -C pycompile-ci -f /tmp/aur-ci -N ""`.
+2. Add `/tmp/aur-ci.pub` to https://aur.archlinux.org/account/ (the SSH Public Key
+   field accepts multiple keys, one per line).
+3. Update the secret: `gh secret set AUR_SSH_PRIVATE_KEY --repo ramackersjp/pycompile < /tmp/aur-ci`.
+4. Verify: `gh workflow run packages --repo ramackersjp/pycompile -f tag=vX.Y.Z` and
+   check that the `aur` job succeeds.
+5. Delete `/tmp/aur-ci*` and remove the old key from the AUR account.
