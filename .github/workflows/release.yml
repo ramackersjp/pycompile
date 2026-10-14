@@ -64,6 +64,27 @@ jobs:
           path: pycompile-${{ matrix.target }}.${{ matrix.ext }}
           if-no-files-found: error
 
+      - name: Install packaging tools
+        if: runner.os == 'Linux'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb,cargo-generate-rpm
+
+      - name: Build .deb and .rpm
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p pkg
+          cargo deb --target ${{ matrix.target }} -o pkg/
+          cargo generate-rpm --target ${{ matrix.target }} -o pkg/
+
+      - name: Upload Linux packages
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: pkg-linux-${{ matrix.target }}
+          path: pkg/*
+          if-no-files-found: error
+
   release:
     name: Publish release
     needs: build
@@ -79,7 +100,10 @@ jobs:
 
       - name: Generate checksums
         working-directory: dist
-        run: sha256sum pycompile-* > SHA256SUMS
+        run: |
+          find . -maxdepth 1 -type f \( -name 'pycompile-*' -o -name 'pycompile_*' \) -print0 \
+            | sort -z | xargs -0 sha256sum > SHA256SUMS
+          cat SHA256SUMS
 
       - name: Create release
         uses: softprops/action-gh-release@v3
@@ -91,6 +115,8 @@ jobs:
           files: |
             dist/pycompile-*.tar.gz
             dist/pycompile-*.zip
+            dist/*.deb
+            dist/*.rpm
             dist/SHA256SUMS
           body: |
             Native binaries for **pycompile** (also installed as `python_compiler`).
@@ -101,6 +127,13 @@ jobs:
             pycompile --version
             pycompile man
             sudo pycompile man --install   # optional, installs man pycompile
+            ```
+
+            Install via a package manager instead:
+
+            ```
+            sudo apt install ./pycompile_*.deb      # Debian / Ubuntu
+            sudo dnf install ./pycompile-*.rpm      # Fedora / RHEL
             ```
 
             Verify downloads against `SHA256SUMS`. See the [repository](https://github.com/ramackersjp/pycompile) and `pycompile man` for the full manual.

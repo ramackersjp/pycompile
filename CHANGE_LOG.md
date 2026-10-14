@@ -42,8 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI workflows: validate (format/lint/build/test/examples/man page/site) and release
   binary builds (`.github/workflows/`).
 - Dependabot configuration for Cargo and GitHub Actions dependencies.
-- Packaging and platform notes (Linux/macOS/Windows distribution status and planned
-  OS packages) in the README and install page.
+- OS packaging: `.deb` and `.rpm` packages are built and attached to each release
+  (`Cargo.toml` metadata, `.github/workflows/release.yml`).
+- Install channels documented in the README and install page: `.deb`, `.rpm`, AUR,
+  Snap, Flatpak, Homebrew, Scoop, winget, Cargo and prebuilt archives.
+- Packaging manifests under `packaging/` and `snap/` for AUR, Flatpak, Homebrew,
+  Scoop, winget and Snap.
 
 ### Fixed
 

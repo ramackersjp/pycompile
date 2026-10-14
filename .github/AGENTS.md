@@ -90,3 +90,11 @@ Pushing a tag matching `v*` triggers `.github/workflows/release.yml`, which buil
 binaries for Linux (x86_64/aarch64), macOS (x86_64/aarch64) and Windows (x86_64),
 packages them, writes `SHA256SUMS`, and publishes a GitHub release. The download
 page links to these assets.
+
+## Packaging
+
+OS package definitions live under `packaging/` (AUR, Flatpak, Homebrew, Scoop, winget)
+and `snap/` (Snap). `.deb` and `.rpm` are built in the release workflow from
+`[package.metadata.deb]` and `[package.metadata.generate-rpm]` in `Cargo.toml` and
+attached to the release. After a release, the Homebrew formula, Scoop manifest and
+winget manifests must be refreshed with the new asset URLs and SHA-256 hashes.

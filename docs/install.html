@@ -133,32 +133,48 @@ pycompile hello.py -o hello
         used, for example <code>CC=clang pycompile hello.py</code>.
       </div>
 
-      <h2 style="margin-top:56px;">Packaging and platforms</h2>
-      <p class="sub">How pycompile is distributed today, and what is planned. Nothing here
-      affects a normal Cargo or from-source install.</p>
-      <div class="grid grid-3">
+      <h2 style="margin-top:56px;">Package managers</h2>
+      <p class="sub">Every channel below installs the same native <code>pycompile</code> and
+      <code>python_compiler</code> commands.</p>
+      <div class="grid grid-2">
         <div class="card">
-          <h3>Linux</h3>
-          <p>Distributed as <code>.tar.gz</code> release archives and via
-          <code>cargo install</code>. OS packages (Flatpak, Snap, AUR, <code>.deb</code>,
-          <code>.rpm</code>) are planned but not published yet.</p>
+          <h3>Debian / Ubuntu</h3>
+          <pre><code>sudo apt install ./pycompile_0.1.0_amd64.deb</code></pre>
         </div>
         <div class="card">
-          <h3>macOS</h3>
-          <p>Distributed as <code>.tar.gz</code> release archives for Intel and Apple
-          Silicon. A Homebrew formula and tap are planned but not published yet.</p>
+          <h3>Fedora / RHEL / openSUSE</h3>
+          <pre><code>sudo dnf install ./pycompile-0.1.0-1.x86_64.rpm</code></pre>
         </div>
         <div class="card">
-          <h3>Windows</h3>
-          <p>Distributed as a <code>.zip</code> release. pycompile needs a C compiler to
-          produce binaries: install MSVC Build Tools, or use MinGW-w64 / LLVM
-          (<code>clang</code>). Add the extracted folder to <code>PATH</code>. A
-          <code>winget</code> / <code>scoop</code> package is planned.</p>
+          <h3>Arch Linux (AUR)</h3>
+          <pre><code>yay -S pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>Snap</h3>
+          <pre><code>sudo snap install pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>Flatpak</h3>
+          <pre><code>flatpak install flathub io.github.ramackersjp.pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>macOS (Homebrew)</h3>
+          <pre><code>brew install ramackersjp/tap/pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>Windows (Scoop)</h3>
+          <pre><code>scoop bucket add ramackersjp https://github.com/ramackersjp/scoop-bucket
+scoop install pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>Windows (winget)</h3>
+          <pre><code>winget install ramackersjp.pycompile</code></pre>
         </div>
       </div>
       <div class="note">
-        <strong>Note:</strong> the compiler itself is a single native binary; the C
-        compiler requirement applies only when you invoke pycompile to build a program.
+        <strong>Note:</strong> on Windows, <code>pycompile</code> needs a C compiler to
+        produce binaries (MSVC Build Tools, MinGW-w64 or LLVM/clang). This applies only
+        when you invoke pycompile, not to the compiler binary itself.
       </div>
     </div>
   </section>

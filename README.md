@@ -119,22 +119,24 @@ pycompile examples/fizzbuzz.py -o /tmp/fizzbuzz && /tmp/fizzbuzz
 
 ## Packaging and platforms
 
-pycompile is distributed today as:
+pycompile is available through the following channels:
 
-- `.tar.gz` release archives for Linux (x86_64, aarch64) and macOS (x86_64, Apple
-  Silicon), and a `.zip` for Windows (x86_64), from the
-  [releases page](https://github.com/ramackersjp/pycompile/releases);
-- a crate published on crates.io (`cargo install python-compiler`).
+| Platform | Command |
+| --- | --- |
+| Debian / Ubuntu (`.deb`) | `sudo apt install ./pycompile_*_amd64.deb` |
+| Fedora / RHEL / openSUSE (`.rpm`) | `sudo dnf install ./pycompile-*.x86_64.rpm` |
+| Arch Linux (AUR) | `yay -S pycompile` (or `paru -S pycompile`) |
+| Linux (Snap) | `sudo snap install pycompile` |
+| Linux (Flatpak) | `flatpak install flathub io.github.ramackersjp.pycompile` |
+| macOS (Homebrew) | `brew install ramackersjp/tap/pycompile` |
+| Windows (Scoop) | `scoop bucket add ramackersjp https://github.com/ramackersjp/scoop-bucket`<br>`scoop install pycompile` |
+| Windows (winget) | `winget install ramackersjp.pycompile` |
+| Rust toolchain (Cargo) | `cargo install python-compiler` |
+| Prebuilt binaries | `.tar.gz` / `.zip` from the [releases page](https://github.com/ramackersjp/pycompile/releases) |
 
-Packaging for OS package managers is not published yet:
-
-- Linux: Flatpak, Snap, AUR, `.deb` and `.rpm` are planned.
-- macOS: a Homebrew formula/tap is planned.
-- Windows: `winget` and `scoop` packages are planned.
-
-On Windows the compiler needs a C compiler to produce binaries (MSVC Build Tools,
-MinGW-w64, or LLVM/clang); this requirement applies only when invoking pycompile, not
-to the compiler binary itself.
+On Windows, `pycompile` needs a C compiler to produce binaries: install MSVC Build
+Tools, or use MinGW-w64 / LLVM (`clang`). This requirement applies only when you
+invoke `pycompile`, not to the compiler binary itself.
 
 ## Website
 
