@@ -246,8 +246,6 @@ jobs:
 
       - uses: actions/checkout@v7
         if: steps.creds.outputs.present == 'true'
-        with:
-          ref: ${{ steps.tag.outputs.tag }}
 
       - name: Point snapcraft.yaml at the release
         if: steps.creds.outputs.present == 'true'
