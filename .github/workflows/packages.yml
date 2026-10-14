@@ -141,3 +141,69 @@ jobs:
           release-repository: ramackersjp/pycompile
           release-tag: ${{ steps.tag.outputs.tag }}
           token: ${{ secrets.PACKAGES_TOKEN }}
+
+  aur:
+    name: Update AUR package
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${{ github.event.workflow_run.head_branch }}"
+          fi
+          case "$tag" in
+            v[0-9]*) ;;
+            *) echo "::error::expected a v* release tag, got '$tag'"; exit 1 ;;
+          esac
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
+            echo "::error::AUR_SSH_PRIVATE_KEY is not set"
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          printf 'Host aur.archlinux.org\n  IdentityFile ~/.ssh/aur\n  IdentitiesOnly yes\n' > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Update PKGBUILD and push
+        run: |
+          set -euo pipefail
+          version="${{ steps.tag.outputs.version }}"
+          tag="${{ steps.tag.outputs.tag }}"
+          export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+          git clone ssh://aur@aur.archlinux.org/pycompile.git aur
+          cd aur
+          sha="$(curl -fsSL "https://github.com/ramackersjp/pycompile/archive/refs/tags/${tag}.tar.gz" | sha256sum | cut -d' ' -f1)"
+          sed -i -E "s/^pkgver=.*/pkgver=${version}/" PKGBUILD
+          sed -i -E "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i -E "s/^sha256sums=.*/sha256sums=('${sha}')/" PKGBUILD
+          sed -i -E "s/^(\s*)pkgver = .*/\1pkgver = ${version}/" .SRCINFO
+          sed -i -E "s/^(\s*)pkgrel = .*/\1pkgrel = 1/" .SRCINFO
+          sed -i -E "s/^(\s*)sha256sums = .*/\1sha256sums = ${sha}/" .SRCINFO
+          sed -i -E "s#^(\s*)source = .*#\1source = pycompile-${version}.tar.gz::https://github.com/ramackersjp/pycompile/archive/refs/tags/${tag}.tar.gz#" .SRCINFO
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "AUR package already up to date"
+            exit 0
+          fi
+          git commit -m "Update to ${version}"
+          git push

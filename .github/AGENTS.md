@@ -99,13 +99,25 @@ and `snap/` (Snap). `.deb` and `.rpm` are built in the release workflow from
 attached to the release.
 
 After a successful release, `.github/workflows/packages.yml` runs (via `workflow_run`,
-and can be re-run with `workflow_dispatch` and a `tag` input). It downloads the
-release `SHA256SUMS`, renders the templates in `.github/packages/` with the new version
-and hashes, and pushes the results to the `ramackersjp/homebrew-tap` (Homebrew) and
-`ramackersjp/scoop-bucket` (Scoop) repositories, then opens a winget PR with
-`vedantmgoyal9/winget-releaser`.
+and can be re-run with `workflow_dispatch` and a `tag` input):
 
-This requires a repository secret `PACKAGES_TOKEN`: a **classic** PAT with the `repo`
-and `workflow` scopes, owned by the account that holds the `microsoft/winget-pkgs`
-fork. The winget step is `continue-on-error` until the first version of `pycompile`
-is accepted into `winget-pkgs`.
+- `update` job: downloads the release `SHA256SUMS`, renders the templates in
+  `.github/packages/` with the new version and hashes, and pushes the results to the
+  `ramackersjp/homebrew-tap` (Homebrew) and `ramackersjp/scoop-bucket` (Scoop)
+  repositories, then opens a winget PR with `vedantmgoyal9/winget-releaser`.
+- `aur` job: clones the AUR repository `ssh://aur@aur.archlinux.org/pycompile.git`,
+  bumps `pkgver`/`pkgrel`, updates `sha256sums` from the release tag tarball, rewrites
+  the matching fields in `.SRCINFO`, and pushes.
+
+Both jobs are idempotent: when nothing changes they skip the commit and push. To bump
+the AUR package for a version, keep `PKGBUILD` and `.SRCINFO` in step with the fields
+the workflow rewrites; do not hand-edit them unless you also update the workflow.
+
+Required repository secrets (never commit keys or tokens to git):
+
+- `PACKAGES_TOKEN`: a **classic** PAT with the `repo` and `workflow` scopes, owned by
+  the account that holds the `microsoft/winget-pkgs` fork. The winget step is
+  `continue-on-error` until the first version of `pycompile` is accepted into
+  `winget-pkgs`.
+- `AUR_SSH_PRIVATE_KEY`: an SSH private key whose public key is registered in the AUR
+  account. Used only by the `aur` job.
