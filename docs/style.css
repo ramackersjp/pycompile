@@ -119,11 +119,11 @@ code, pre, kbd {
 .btn-primary:hover { background: var(--py-yellow-dark); }
 
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.4);
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
 }
-.btn-ghost:hover { background: rgba(255, 255, 255, 0.18); }
+.btn-ghost:hover { border-color: var(--py-blue-light); color: var(--py-blue-dark); }
 
 .btn-dark {
   background: var(--py-blue);
