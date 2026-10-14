@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Compile Python source files into standalone native binaries"
 license = "MIT"
-repository = "https://github.com/ramackersjp/Python_Compiler"
+repository = "https://github.com/ramackersjp/pycompile"
 readme = "README.md"
 default-run = "pycompile"
 

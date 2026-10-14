@@ -32,8 +32,8 @@ This installs two identical commands, `pycompile` and `python_compiler`.
 ### From source
 
 ```
-git clone https://github.com/ramackersjp/Python_Compiler
-cd Python_Compiler
+git clone https://github.com/ramackersjp/pycompile
+cd pycompile
 cargo build --release
 # optionally:
 cargo install --path . --release
@@ -123,7 +123,7 @@ pycompile is distributed today as:
 
 - `.tar.gz` release archives for Linux (x86_64, aarch64) and macOS (x86_64, Apple
   Silicon), and a `.zip` for Windows (x86_64), from the
-  [releases page](https://github.com/ramackersjp/Python_Compiler/releases);
+  [releases page](https://github.com/ramackersjp/pycompile/releases);
 - a crate published on crates.io (`cargo install python-compiler`).
 
 Packaging for OS package managers is not published yet:
