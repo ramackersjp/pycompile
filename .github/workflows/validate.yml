@@ -90,3 +90,9 @@ jobs:
           assert cfg.get("outputDirectory") == "docs", cfg
           assert cfg.get("buildCommand") is None, cfg
           PY
+
+      - name: Check downloads page is in sync with the change log
+        run: |
+          set -e
+          python3 scripts/gen_releases.py
+          git diff --exit-code docs/download.html

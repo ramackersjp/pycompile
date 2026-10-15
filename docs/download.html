@@ -24,50 +24,160 @@
     <div class="container">
       <h1 style="font-size:38px;margin:0 0 8px;">Download</h1>
       <p class="sub">Grab a prebuilt binary for your platform, or build from source with Cargo.
+      Pick the latest release below, or browse the release history for an older version.
       Every archive contains the <code>pycompile</code> binary.</p>
 
+      <!-- releases:start -->
+      <h2 style="margin-top:0;">Latest release <span class="tag">0.2.0</span></h2>
+      <p class="sub">Released 2026-10-15, for Linux, macOS and Windows. Prefer a package? Use the <a href="install.html">install guide</a> for Cargo, Homebrew, apt and dnf.</p>
       <div class="grid grid-2">
         <div class="card">
           <h3>Linux <span class="tag">x86_64</span></h3>
           <p class="mb-0">glibc-based distributions (Ubuntu, Debian, Fedora, Arch).</p>
-          <a class="btn btn-dark mt-16"
-             href="https://github.com/ramackersjp/pycompile/releases/latest/download/pycompile-x86_64-unknown-linux-gnu.tar.gz">Download .tar.gz</a>
+          <a class="btn btn-dark mt-16" href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-x86_64-unknown-linux-gnu.tar.gz">Download</a>
         </div>
         <div class="card">
           <h3>Linux <span class="tag">aarch64</span></h3>
           <p class="mb-0">ARM64 distributions (Raspberry Pi OS 64-bit, AWS Graviton).</p>
-          <a class="btn btn-dark mt-16"
-             href="https://github.com/ramackersjp/pycompile/releases/latest/download/pycompile-aarch64-unknown-linux-gnu.tar.gz">Download .tar.gz</a>
+          <a class="btn btn-dark mt-16" href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-aarch64-unknown-linux-gnu.tar.gz">Download</a>
         </div>
         <div class="card">
           <h3>macOS <span class="tag">Intel</span></h3>
           <p class="mb-0">x86_64 Apple hardware and most Intel Macs.</p>
-          <a class="btn btn-dark mt-16"
-             href="https://github.com/ramackersjp/pycompile/releases/latest/download/pycompile-x86_64-apple-darwin.tar.gz">Download .tar.gz</a>
+          <a class="btn btn-dark mt-16" href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-x86_64-apple-darwin.tar.gz">Download</a>
         </div>
         <div class="card">
           <h3>macOS <span class="tag">Apple Silicon</span></h3>
           <p class="mb-0">M1, M2, M3 and newer Apple Silicon Macs.</p>
-          <a class="btn btn-dark mt-16"
-             href="https://github.com/ramackersjp/pycompile/releases/latest/download/pycompile-aarch64-apple-darwin.tar.gz">Download .tar.gz</a>
+          <a class="btn btn-dark mt-16" href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-aarch64-apple-darwin.tar.gz">Download</a>
         </div>
         <div class="card">
           <h3>Windows <span class="tag">x86_64</span></h3>
-          <p class="mb-0">MSVC toolchain. Requires a C compiler at run time of the compiler
-          itself.</p>
-          <a class="btn btn-dark mt-16"
-             href="https://github.com/ramackersjp/pycompile/releases/latest/download/pycompile-x86_64-pc-windows-msvc.zip">Download .zip</a>
+          <p class="mb-0">MSVC toolchain. Requires a C compiler at run time of the compiler itself.</p>
+          <a class="btn btn-dark mt-16" href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-x86_64-pc-windows-msvc.zip">Download</a>
+        </div>
+        <div class="card">
+          <h3>Debian / Fedora</h3>
+          <p class="mb-0">Native packages for apt and dnf based distributions.</p>
+          <a class="btn btn-dark mt-16" href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile_0.2.0-1_amd64.deb">Download .deb</a> <a class="btn btn-ghost mt-16" href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-0.2.0-1.x86_64.rpm">Download .rpm</a>
         </div>
         <div class="card">
           <h3>All releases &amp; checksums</h3>
           <p class="mb-0">Every tagged version with <code>SHA256SUMS</code> for verification.</p>
-          <a class="btn btn-dark mt-16"
-             href="https://github.com/ramackersjp/pycompile/releases">Browse releases</a>
+          <a class="btn btn-dark mt-16" href="https://github.com/ramackersjp/pycompile/releases">Browse releases</a>
         </div>
       </div>
 
+      <h2>Release history</h2>
+      <p class="sub">Every tagged version with its files and change log. See <a href="https://github.com/ramackersjp/pycompile/releases">GitHub</a> for the full asset list of each release.</p>
+      <article class="release">
+        <div class="release-head">
+          <h3>0.2.0 <span class="tag">latest</span></h3>
+          <span class="release-date">Released 2026-10-15</span>
+        </div>
+        <details class="release-files" open>
+          <summary>Download files</summary>
+          <ul class="file-list">
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-x86_64-unknown-linux-gnu.tar.gz">Linux x86_64 (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-aarch64-unknown-linux-gnu.tar.gz">Linux aarch64 (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-x86_64-apple-darwin.tar.gz">macOS Intel (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-aarch64-apple-darwin.tar.gz">macOS Apple Silicon (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-x86_64-pc-windows-msvc.zip">Windows x86_64 (zip)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile_0.2.0-1_amd64.deb">Debian/Ubuntu amd64 (deb)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile_0.2.0-1_arm64.deb">Debian/Ubuntu arm64 (deb)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-0.2.0-1.x86_64.rpm">Fedora/RHEL x86_64 (rpm)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/pycompile-0.2.0-1.aarch64.rpm">Fedora/RHEL aarch64 (rpm)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.2.0/SHA256SUMS">SHA256SUMS</a></li>
+          </ul>
+        </details>
+        <details class="release-log" open>
+          <summary>Change log</summary>
+          <div class="changelog">
+<h4>Added</h4>
+<ul>
+  <li><code>%</code> string formatting in <code>runtime/pyrt.c</code> (<code>percent_format</code>): <code>%s</code>/<code>%r</code>/<code>%a</code>, integer and float conversions, flags (<code>- 0 + space #</code>), width, precision, <code>%%</code>, and mapping form <code>%(name)s</code>, matching CPython output.</li>
+  <li><code>lambda</code> expressions, nested functions and closures: cell objects (<code>PY_CELL</code>, <code>py_cell_new</code>/<code>py_cell_get</code>/<code>py_cell_set</code>), free-variable analysis and <code>py_closure</code>, with late binding and closures over enclosing locals and parameters (<code>src/ast.rs</code>, <code>src/parser.rs</code>, <code>src/codegen.rs</code>, <code>runtime/pyrt.c</code>).</li>
+  <li>Exception handling: <code>try</code> / <code>except</code> / <code>except ... as name</code> / <code>else</code> / <code>finally</code>, <code>raise</code> (bare, <code>raise E</code>, <code>raise E(...)</code>) and <code>assert</code>. The runtime uses <code>setjmp</code>/<code>longjmp</code> handlers and a hierarchy of built-in exception types (<code>ZeroDivisionError</code>, <code>IndexError</code>, <code>KeyError</code>, <code>TypeError</code>, <code>ValueError</code>, <code>AssertionError</code>, <code>RuntimeError</code>, ...). Runtime errors now raise catchable exceptions; uncaught exceptions print a traceback and exit 1.</li>
+  <li>Conservative mark-and-sweep garbage collector (<code>runtime/pyrt.c</code>): objects are tracked in an intrusive list and a hash set; collection scans the C stack, the registered global roots and a few runtime roots, marks reachable objects and frees the rest, including unreachable reference cycles. The generated <code>main</code> records the stack base via <code>py_gc_init</code> and registers its globals with <code>py_gc_register_root</code> (<code>src/codegen.rs</code>).</li>
+  <li>Classes: <code>class</code> definitions with methods, <code>__init__</code>, class attributes and instance attributes, attribute access and assignment, single inheritance with method lookup along the base chain, class instantiation, <code>isinstance</code>, and the <code>__str__</code>, <code>__repr__</code>, <code>__eq__</code>, <code>__len__</code>, <code>__getitem__</code>, <code>__setitem__</code> and <code>__contains__</code> protocols (<code>src/ast.rs</code>, <code>src/parser.rs</code>, <code>src/codegen.rs</code>, <code>runtime/pyrt.c</code>).</li>
+</ul>
+<h4>Changed</h4>
+<ul>
+  <li>Removed the deprecated <code>python_compiler</code> alias. <code>pycompile</code> is now the only command-line entry point; packaging, workflows and documentation were updated accordingly.</li>
+</ul>
+<h4>Fixed</h4>
+<ul>
+  <li><code>sort()</code> and <code>sorted()</code> are now stable when <code>reverse=True</code>.</li>
+</ul>
+<h4>Notes and limitations</h4>
+<ul>
+  <li>The garbage collector is conservative: it scans the whole C stack on each collection and may keep an unreachable object alive a little longer than strictly necessary.</li>
+  <li><code>super()</code>, multiple inheritance, decorators, <code>with</code>, generators, <code>async</code>/<code>await</code>, and modules other than <code>math</code>/<code>sys</code> are not supported and produce a clear compile-time error.</li>
+  <li>A <code>return</code>, <code>break</code> or <code>continue</code> inside a <code>try</code> that has a <code>finally</code> clause is rejected at compile time.</li>
+  <li>An uncaught exception prints a single-line traceback (no file/line frames).</li>
+</ul>
+          </div>
+        </details>
+      </article>
+      <article class="release">
+        <div class="release-head">
+          <h3>0.1.0</h3>
+          <span class="release-date">Released 2026-10-14</span>
+        </div>
+        <details class="release-files">
+          <summary>Download files</summary>
+          <ul class="file-list">
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-x86_64-unknown-linux-gnu.tar.gz">Linux x86_64 (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-aarch64-unknown-linux-gnu.tar.gz">Linux aarch64 (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-x86_64-apple-darwin.tar.gz">macOS Intel (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-aarch64-apple-darwin.tar.gz">macOS Apple Silicon (tar.gz)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-x86_64-pc-windows-msvc.zip">Windows x86_64 (zip)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile_0.1.0-1_amd64.deb">Debian/Ubuntu amd64 (deb)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile_0.1.0-1_arm64.deb">Debian/Ubuntu arm64 (deb)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-0.1.0-1.x86_64.rpm">Fedora/RHEL x86_64 (rpm)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-0.1.0-1.aarch64.rpm">Fedora/RHEL aarch64 (rpm)</a></li>
+            <li><a href="https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/SHA256SUMS">SHA256SUMS</a></li>
+          </ul>
+        </details>
+        <details class="release-log">
+          <summary>Change log</summary>
+          <div class="changelog">
+<h4>Added</h4>
+<ul>
+  <li>Initial <code>pycompile</code> compiler: Python source is translated to C and compiled to a standalone native binary by the system C compiler (<code>src/lexer.rs</code>, <code>src/parser.rs</code>, <code>src/codegen.rs</code>, <code>src/driver.rs</code>).</li>
+  <li>Embedded C runtime <code>runtime/pyrt.c</code> / <code>runtime/pyrt.h</code> with tagged-union values, operators, comparisons, lists, tuples, dicts, sets, iterators, f-string formatting, and a set of builtins.</li>
+  <li>Supported syntax: literals and <code>None</code>, f-strings (format specs and <code>!r</code>), lists/tuples/sets/dicts and comprehensions (list, set, dict), <code>if</code>/<code>elif</code>/<code>else</code>, <code>while</code>, <code>for</code>-<code>else</code>, <code>break</code>, <code>continue</code>, <code>pass</code>, <code>def</code> with defaults, recursion, <code>*args</code> / <code>**kwargs</code> parameters, calls with positional/keyword/<code>*</code>/<code>**</code> arguments, chained comparisons, <code>in</code>/<code>not in</code>, <code>is</code>/<code>is not</code>, slicing, item and augmented assignment, the <code>math</code> and <code>sys</code> modules.</li>
+  <li>Two equivalent command-line entry points: <code>pycompile</code> and <code>python_compiler</code> (<code>src/lib.rs</code>, <code>src/main.rs</code>, <code>src/bin/python_compiler.rs</code>).</li>
+  <li>CLI options: <code>-o/--output</code>, <code>--emit-c</code>, <code>--keep-temps</code>, <code>-r/--run</code>, <code>--man</code>, <code>-h/--help</code>, <code>-V/--version</code>.</li>
+  <li>Terminal manual and man-page installation: <code>pycompile man</code>, <code>pycompile man --install</code>, <code>pycompile man --prefix DIR</code> (<code>src/man.rs</code>, <code>docs/pycompile.1</code>).</li>
+  <li><code>key</code> and <code>reverse</code> support for <code>sorted()</code> and <code>list.sort()</code>, including first-class references to common builtins such as <code>len</code>, <code>str</code>, <code>int</code> and <code>abs</code>.</li>
+  <li>Static documentation site with install and download instructions (<code>docs/</code>), deployed to Vercel with zero configuration (<code>vercel.json</code>: no build step, <code>outputDirectory</code> set to <code>docs</code>).</li>
+  <li>Example programs with recorded expected output (<code>examples/</code>).</li>
+  <li>Integration tests that compile and run every example and compare output (<code>tests/integration.rs</code>).</li>
+  <li>CI workflows: validate (format/lint/build/test/examples/man page/site) and release binary builds (<code>.github/workflows/</code>).</li>
+  <li>Dependabot configuration for Cargo and GitHub Actions dependencies.</li>
+  <li>OS packaging: <code>.deb</code> and <code>.rpm</code> packages are built and attached to each release (<code>Cargo.toml</code> metadata, <code>.github/workflows/release.yml</code>).</li>
+  <li>Install channels documented in the README and install page: <code>.deb</code>, <code>.rpm</code>, Homebrew, Scoop, Cargo and prebuilt archives (AUR, Snap and winget are prepared and listed as pending first publication).</li>
+  <li>Packaging manifests under <code>packaging/</code> and <code>snap/</code> for AUR, Flatpak, Homebrew, Scoop, winget and Snap. The Flatpak manifest is provided for self-build only: Flathub is not used because the sandbox has no C compiler for pycompile to invoke.</li>
+</ul>
+<h4>Fixed</h4>
+<ul>
+  <li>Relative output paths (for example <code>pycompile prog.py -o prog</code>) now write the binary into the caller's working directory instead of the temporary build directory, which was deleted afterwards. Output paths are resolved to absolute before invoking the C compiler (<code>src/driver.rs</code>).</li>
+</ul>
+<h4>Notes and limitations</h4>
+<ul>
+  <li>No garbage collection: allocations are not reclaimed until process exit.</li>
+  <li><code>class</code>, closures, nested scopes, exceptions (<code>try</code>/<code>except</code>), <code>with</code>, decorators, <code>lambda</code>, <code>async</code>/<code>await</code>, and modules other than <code>math</code>/<code>sys</code> are not supported and produce a clear compile-time error.</li>
+  <li><code>%</code> string formatting is not supported; use f-strings.</li>
+  <li><code>sort</code>/<code>sorted</code> are not fully stable when <code>reverse=True</code>.</li>
+</ul>
+          </div>
+        </details>
+      </article>
+<!-- releases:end -->
+
       <h2 style="margin-top:56px;">After downloading</h2>
-      <p>Extract the archive, then put the binaries on your <code>PATH</code> and make them
+      <p>Extract the archive, then put the binary on your <code>PATH</code> and make it
       executable on Unix-like systems:</p>
       <pre style="background:var(--code-bg);color:var(--code-text);padding:16px;border-radius:10px;overflow-x:auto;"><code><span class="tok-c"># Linux / macOS</span>
 tar -xzf pycompile-x86_64-unknown-linux-gnu.tar.gz
@@ -78,6 +188,7 @@ sudo mv pycompile /usr/local/bin/
 Expand-Archive pycompile-x86_64-pc-windows-msvc.zip -DestinationPath C:\tools\pycompile</code></pre>
 
       <h2>Verify a checksum</h2>
+      <p>Download <code>SHA256SUMS</code> alongside your archive and check it:</p>
       <pre style="background:var(--code-bg);color:var(--code-text);padding:16px;border-radius:10px;overflow-x:auto;"><code>sha256sum -c SHA256SUMS --ignore-missing</code></pre>
 
       <h2>Install the man page</h2>

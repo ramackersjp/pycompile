@@ -83,12 +83,27 @@ Pages: `index.html`, `docs.html`, `install.html`, `download.html`, shared `style
 plus `pycompile.1`. There is no GitHub Pages workflow (Pages requires a paid plan for
 private repositories).
 
+`docs/download.html` lists the latest release and the full release history (files and
+change log). The section between the `<!-- releases:start -->` and `<!-- releases:end -->`
+markers is generated from `CHANGE_LOG.md` by `scripts/gen_releases.py`; run it after
+editing the change log. The `site` job in `validate.yml` fails if the page is stale.
+
 ## Release
 
 Pushing a tag matching `v*` triggers `.github/workflows/release.yml`, which builds
 binaries for Linux (x86_64/aarch64), macOS (x86_64/aarch64) and Windows (x86_64),
 packages them, writes `SHA256SUMS`, and publishes a GitHub release. The download
-page links to these assets.
+page links to these assets by their stable file names.
+
+To cut a release:
+
+1. Move the `[Unreleased]` entries in `CHANGE_LOG.md` into a new
+   `## [x.y.z] - YYYY-MM-DD` section and bump `version` in `Cargo.toml`.
+2. Run `python3 scripts/gen_releases.py` to refresh `docs/download.html` (the
+   release history is generated from the change log).
+3. Commit, push `trunk`, tag `vX.Y.Z` and push the tag. Vercel redeploys the site
+   from `trunk`; the tag triggers the binary release and, on success, the
+   `packages` workflow.
 
 ## Packaging
 

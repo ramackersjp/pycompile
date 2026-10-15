@@ -410,3 +410,72 @@ td code { background: #eef2f7; }
 .mt-8 { margin-top: 8px; }
 .mt-16 { margin-top: 16px; }
 .mb-0 { margin-bottom: 0; }
+
+/* Release history */
+.release {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(20, 30, 50, 0.05);
+}
+
+.release-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.release-head h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--py-blue-dark);
+}
+
+.release-date { color: var(--muted); font-size: 14px; }
+
+.release details {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.release summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--py-blue);
+  font-size: 15px;
+}
+
+.release summary:hover { text-decoration: underline; }
+
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 6px 24px;
+}
+
+.file-list li { font-size: 14px; }
+
+.changelog { font-size: 15px; color: var(--muted); }
+.changelog h4 {
+  margin: 18px 0 6px;
+  font-size: 15px;
+  color: var(--py-blue-dark);
+}
+.changelog h4:first-child { margin-top: 10px; }
+.changelog ul { margin: 6px 0; padding-left: 22px; }
+.changelog li { margin: 4px 0; }
+.changelog code {
+  background: #eef2f7;
+  color: var(--py-blue-dark);
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 13.5px;
+}
