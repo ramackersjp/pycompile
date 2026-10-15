@@ -96,3 +96,12 @@ jobs:
           set -e
           python3 scripts/gen_releases.py
           git diff --exit-code docs/download.html
+
+  versions:
+    name: Version references match Cargo.toml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check version references
+        run: python3 scripts/check_versions.py

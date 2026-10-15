@@ -75,35 +75,60 @@ cargo run -- examples/hello.py -o /tmp/hello && /tmp/hello
 5. Add/extend a test in `tests/integration.rs`.
 6. Update `docs/`, the man page `docs/pycompile.1`, and `CHANGE_LOG.md`.
 
-## Website
+## Website and docs
 
 The static site lives in `docs/` and is deployed to Vercel. `vercel.json` at the
 repository root serves `docs/` as-is (`buildCommand: null`, `outputDirectory: "docs"`).
 Pages: `index.html`, `docs.html`, `install.html`, `download.html`, shared `style.css`,
 plus `pycompile.1`. There is no GitHub Pages workflow (Pages requires a paid plan for
-private repositories).
+private repositories). Every push to `trunk` redeploys the site, so the pages and the
+version numbers they show must stay correct at all times.
 
-`docs/download.html` lists the latest release and the full release history (files and
-change log). The section between the `<!-- releases:start -->` and `<!-- releases:end -->`
-markers is generated from `CHANGE_LOG.md` by `scripts/gen_releases.py`; run it after
-editing the change log. The `site` job in `validate.yml` fails if the page is stale.
+`docs/download.html` is the versioned download page: it shows the latest release and the
+full release history, and for every version the downloadable files and its change log.
+The section between the `<!-- releases:start -->` and `<!-- releases:end -->` markers is
+generated from `CHANGE_LOG.md` by `scripts/gen_releases.py`. Never edit that section by
+hand: edit the change log and run the generator.
 
-## Release
+## Version bumps, docs and releases
 
-Pushing a tag matching `v*` triggers `.github/workflows/release.yml`, which builds
-binaries for Linux (x86_64/aarch64), macOS (x86_64/aarch64) and Windows (x86_64),
-packages them, writes `SHA256SUMS`, and publishes a GitHub release. The download
-page links to these assets by their stable file names.
+Bumping the version is more than a tag: the website and docs must move with it. Two
+scripts guard this and run in `validate.yml`; run them locally before committing:
+
+- `python3 scripts/gen_releases.py` regenerates `docs/download.html` from `CHANGE_LOG.md`.
+  The `site` job fails when the page is stale.
+- `python3 scripts/check_versions.py` checks that `Cargo.toml` and every hand-maintained
+  version reference agree. The `versions` job fails on any mismatch. It covers:
+
+  | File | Reference to update |
+  | --- | --- |
+  | `CHANGE_LOG.md` | a `## [x.y.z]` section for the version |
+  | `docs/download.html` | generated; contains `vx.y.z` |
+  | `docs/pycompile.1` | `.TH` header: `pycompile x.y.z` |
+  | `docs/install.html` | `.deb` and `.rpm` example file names |
+  | `packaging/flatpak/*.yml` | `tags/vx.y.z.tar.gz` |
+  | `packaging/flatpak/*.metainfo.xml` | `release version="x.y.z"` |
+
+  The other `packaging/` and `snap/` manifests are rewritten by the `packages` workflow
+  after a release, so they are intentionally not checked here.
 
 To cut a release:
 
 1. Move the `[Unreleased]` entries in `CHANGE_LOG.md` into a new
-   `## [x.y.z] - YYYY-MM-DD` section and bump `version` in `Cargo.toml`.
-2. Run `python3 scripts/gen_releases.py` to refresh `docs/download.html` (the
-   release history is generated from the change log).
-3. Commit, push `trunk`, tag `vX.Y.Z` and push the tag. Vercel redeploys the site
-   from `trunk`; the tag triggers the binary release and, on success, the
-   `packages` workflow.
+   `## [x.y.z] - YYYY-MM-DD` section.
+2. Bump `version` in `Cargo.toml` and update every reference in the table above: the man
+   page version, the install-page examples, and the Flatpak manifest version and URL.
+3. Run `python3 scripts/gen_releases.py` and `python3 scripts/check_versions.py`; fix
+   anything they report.
+4. Commit and push `trunk`; Vercel redeploys the site from `trunk`.
+5. Tag `vx.y.z` and push the tag. This triggers `.github/workflows/release.yml`, which
+   builds binaries for Linux (x86_64/aarch64), macOS (x86_64/aarch64) and Windows
+   (x86_64), packages them, writes `SHA256SUMS` and publishes a GitHub release; on
+   success the `packages` workflow updates Homebrew, Scoop, winget, AUR and Snap.
+
+Because the download page links to release assets by their stable file names, the new
+version appears on the site as soon as its `## [x.y.z]` change-log section exists and the
+generator has been run.
 
 ## Packaging
 

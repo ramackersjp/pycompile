@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 This log is written for both humans and AI agents: entries should be concise,
 factual, and reference the affected modules or files where useful.
 
+This file also drives the version list and change logs on the download page
+(`docs/download.html`). After editing it, run `python3 scripts/gen_releases.py`
+to refresh the page, and follow the release checklist in `.github/AGENTS.md`
+when bumping the version.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
