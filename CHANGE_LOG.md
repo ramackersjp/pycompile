@@ -20,8 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Versioned downloads page on the documentation site: every release is listed with
   its downloadable files and change log, generated from this file by
   `scripts/gen_releases.py` (`docs/download.html`).
-- Uninstall instructions and a "Reporting issues" section in the README and on the
-  site (`README.md`, `docs/install.html`, `docs/docs.html`).
+- Uninstall instructions and a "Reporting issues" section in the README, the manual and
+  on the site (`README.md`, `docs/pycompile.1`, `src/man.rs`, `docs/docs.html`,
+  `docs/install.html`).
 
 ## [0.2.0] - 2026-10-15
 

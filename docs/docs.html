@@ -31,6 +31,7 @@
       <a href="#environment">Environment</a>
       <a href="#exit">Exit status</a>
       <a href="#files">Files</a>
+      <a href="#uninstall">Uninstall</a>
       <a href="#examples">Examples</a>
       <a href="#limitations">Limitations</a>
       <a href="#issues">Reporting issues</a>
@@ -171,6 +172,25 @@ pycompile man [--install] [--prefix DIR]</code></pre>
           <tr><td><code>&lt;prefix&gt;/share/man/man1/</code></td><td>Location when <code>--prefix</code> is used.</td></tr>
         </tbody>
       </table>
+
+      <h2 id="uninstall">Uninstall</h2>
+      <p>Remove pycompile with the same channel you installed it with:</p>
+      <table>
+        <thead><tr><th>Channel</th><th>Command</th></tr></thead>
+        <tbody>
+          <tr><td>Cargo</td><td><code>cargo uninstall python-compiler</code></td></tr>
+          <tr><td>Manual / from source</td><td><code>rm "$(command -v pycompile)"</code></td></tr>
+          <tr><td>Debian / Ubuntu</td><td><code>sudo apt remove pycompile</code></td></tr>
+          <tr><td>Fedora / RHEL / openSUSE</td><td><code>sudo dnf remove pycompile</code></td></tr>
+          <tr><td>macOS (Homebrew)</td><td><code>brew uninstall pycompile</code></td></tr>
+          <tr><td>Windows (Scoop)</td><td><code>scoop uninstall pycompile</code></td></tr>
+          <tr><td>Arch Linux (AUR)</td><td><code>yay -Rns pycompile</code></td></tr>
+          <tr><td>Linux (Snap)</td><td><code>sudo snap remove python-compiler</code></td></tr>
+          <tr><td>Windows (winget)</td><td><code>winget uninstall ramackersjp.pycompile</code></td></tr>
+        </tbody>
+      </table>
+      <p>If you installed the man page, remove it as well:
+      <code>sudo rm /usr/local/share/man/man1/pycompile.1</code>.</p>
 
       <h2 id="examples">Examples</h2>
       <pre><code><span class="tok-c"># Compile a single file</span>

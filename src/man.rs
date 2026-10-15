@@ -258,6 +258,15 @@ fn render_terminal() -> String {
     );
     w.option("<prefix>/share/man/man1/", "Location when --prefix is used");
 
+    w.section("UNINSTALL");
+    w.para(
+        "Remove pycompile with the same channel you installed it with: apt remove pycompile \
+         (Debian/Ubuntu), dnf remove pycompile (Fedora/RHEL), brew uninstall pycompile \
+         (macOS), scoop uninstall pycompile (Windows), cargo uninstall python-compiler \
+         (Cargo), or delete the binary. If you installed the man page, remove \
+         /usr/local/share/man/man1/pycompile.1 as well.",
+    );
+
     w.section("SEE ALSO");
     w.line("       man(1), cc(1), gcc(1), clang(1), python3(1)");
 
