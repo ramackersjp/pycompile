@@ -42,7 +42,6 @@ jobs:
           dir="pycompile-${{ matrix.target }}"
           mkdir -p "$dir"
           cp "target/${{ matrix.target }}/release/pycompile" "$dir/"
-          cp "target/${{ matrix.target }}/release/python_compiler" "$dir/"
           cp LICENSE README.md docs/pycompile.1 "$dir/"
           tar -czf "pycompile-${{ matrix.target }}.tar.gz" "$dir"
 
@@ -53,7 +52,6 @@ jobs:
           $dir = "pycompile-${{ matrix.target }}"
           New-Item -ItemType Directory -Force -Path $dir | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/pycompile.exe" $dir
-          Copy-Item "target/${{ matrix.target }}/release/python_compiler.exe" $dir
           Copy-Item LICENSE, README.md, docs/pycompile.1 $dir
           Compress-Archive -Path $dir -DestinationPath "pycompile-${{ matrix.target }}.zip"
 
@@ -119,9 +117,9 @@ jobs:
             dist/*.rpm
             dist/SHA256SUMS
           body: |
-            Native binaries for **pycompile** (also installed as `python_compiler`).
+            Native binaries for **pycompile**.
 
-            Extract the archive for your platform, put both binaries on your `PATH`, then:
+            Extract the archive for your platform, put the binary on your `PATH`, then:
 
             ```
             pycompile --version

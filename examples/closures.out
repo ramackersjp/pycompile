@@ -1,0 +1,11 @@
+adders: 8 103
+counter: 42
+compose: 21
+by key: [('a', 3), ('b', 2), ('c', 1)]
+by value desc: [('a', 3), ('b', 2), ('c', 1)]
+numbers desc: [8, 5, 2, 1]
+late binding: 2 2 2
+captures global: 15
+defaults: 101 3
+chain: 123
+higher order: 49

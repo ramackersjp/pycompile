@@ -98,11 +98,10 @@ fn render_terminal() -> String {
     let mut w = W::new(color);
 
     w.section("NAME");
-    w.line("       pycompile, python_compiler - compile Python source into a native binary");
+    w.line("       pycompile - compile Python source into a native binary");
 
     w.section("SYNOPSIS");
     w.line("       pycompile [OPTIONS] <INPUT> [-- PROGRAM_ARGS...]");
-    w.line("       python_compiler [OPTIONS] <INPUT> [-- PROGRAM_ARGS...]");
     w.line("       pycompile man [--install] [--prefix DIR]");
 
     w.section("DESCRIPTION");
@@ -117,13 +116,6 @@ fn render_terminal() -> String {
         "It is designed for small command-line programs and scripts where you want Python's \
          syntax and speed of iteration but a portable native binary as the deliverable.",
     );
-    w.blank();
-    w.para(
-        "Two equivalent entry points are provided: the short name pycompile and the long \
-         name python_compiler. Anywhere you can write pycompile you can also write \
-         python_compiler.",
-    );
-
     w.section("QUICK START");
     w.para("Compile a single file to a native binary named after the source:");
     w.command("       pycompile hello.py");
@@ -190,20 +182,30 @@ fn render_terminal() -> String {
     w.line("       - Calls with positional, keyword, * and ** arguments");
     w.line("       - Chained comparisons, in / not in, is / is not, and, or, not");
     w.line("       - Slicing and item assignment, augmented assignment");
+    w.line("       - % string formatting (positional and mapping forms, flags, width, precision)");
+    w.line("       - lambda expressions, nested functions and closures (including late binding)");
+    w.line("       - try / except / except ... as / else / finally, raise, assert");
+    w.line("       - catchable built-in exception types with their inheritance hierarchy");
+    w.line("       - Stable sort / sorted with reverse=True and key=");
+    w.line("       - class definitions with methods, __init__, class and instance attributes");
+    w.line("       - single inheritance, isinstance, and the __str__, __repr__, __eq__,");
+    w.line("         __len__, __getitem__, __setitem__ and __contains__ protocols");
     w.line("       - The math and sys modules");
     w.blank();
     w.para("The following are not yet supported and produce a clear compile error:");
-    w.line("       - class definitions, closures and nested scopes");
-    w.line("       - try / except / finally, with, raise, global nonlocal edge cases");
-    w.line("       - decorators, lambda expressions, async and await");
+    w.line("       - super(), multiple inheritance and decorators");
+    w.line("       - with, generators, async and await");
+    w.line("       - return, break or continue inside a try that has a finally clause");
     w.line("       - Modules other than math and sys");
 
     w.section("RUNTIME MODEL");
     w.para(
         "The generated C links against a small runtime library that is embedded by the \
-         compiler. Values are heap-allocated tagged objects. Memory is not garbage \
-         collected: allocations live until process exit. This keeps the compiler simple \
-         and the output small, and is fine for typical short-lived CLI programs.",
+         compiler. Values are heap-allocated tagged objects. A conservative mark-and-sweep \
+         garbage collector reclaims unreachable objects by scanning the C stack, the \
+         program's globals and a few runtime roots; unreachable reference cycles are \
+         collected as well. Because the scan is conservative, an object can occasionally \
+         stay alive a little longer than strictly necessary.",
     );
     w.blank();
     w.para(
@@ -254,21 +256,20 @@ fn render_terminal() -> String {
         "/usr/local/share/man/man1/pycompile.1",
         "Installed manual page",
     );
-    w.option(
-        "/usr/local/share/man/man1/python_compiler.1",
-        "Installed manual page (alias)",
-    );
     w.option("<prefix>/share/man/man1/", "Location when --prefix is used");
 
     w.section("SEE ALSO");
     w.line("       man(1), cc(1), gcc(1), clang(1), python3(1)");
 
     w.section("BUGS AND LIMITATIONS");
-    w.line("       - No garbage collection: long-running or memory-heavy loops can grow.");
-    w.line("       - Closures, classes, exceptions and lambdas are not supported yet.");
-    w.line("       - % string formatting is not supported; use f-strings instead.");
+    w.line("       - The garbage collector is conservative and scans the whole C stack on each");
+    w.line("         collection; it may keep an object alive a little longer than necessary.");
+    w.line("       - super(), multiple inheritance and decorators are not supported.");
     w.line(
-        "       - sort/sorted support reverse and key but are not fully stable when reverse=True.",
+        "       - return, break or continue inside a try that has a finally clause is rejected.",
+    );
+    w.line(
+        "       - An uncaught exception prints a single-line traceback without file/line frames.",
     );
 
     w.section("AUTHOR");
@@ -298,21 +299,18 @@ fn do_install(prefix: &std::path::Path) -> Result<()> {
             ),
         )
     })?;
-    for name in ["pycompile.1", "python_compiler.1"] {
-        let path = man1.join(name);
-        fs::write(&path, MAN_PAGE).map_err(|e| {
-            CompileError::new(
-                "<man>",
-                0,
-                0,
-                format!("cannot write {}: {}", path.display(), e),
-            )
-        })?;
-        println!("Installed {}", path.display());
-    }
+    let path = man1.join("pycompile.1");
+    fs::write(&path, MAN_PAGE).map_err(|e| {
+        CompileError::new(
+            "<man>",
+            0,
+            0,
+            format!("cannot write {}: {}", path.display(), e),
+        )
+    })?;
+    println!("Installed {}", path.display());
     println!();
     println!("Read it with:  man pycompile");
-    println!("              man python_compiler");
     Ok(())
 }
 

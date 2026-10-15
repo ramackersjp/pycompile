@@ -1,6 +1,6 @@
 [package]
 name = "python-compiler"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Compile Python source files into standalone native binaries"
 license = "MIT"
@@ -9,16 +9,12 @@ readme = "README.md"
 default-run = "pycompile"
 
 [lib]
-name = "python_compiler"
+name = "pycompile"
 path = "src/lib.rs"
 
 [[bin]]
 name = "pycompile"
 path = "src/main.rs"
-
-[[bin]]
-name = "python_compiler"
-path = "src/bin/python_compiler.rs"
 
 [profile.release]
 lto = true
@@ -33,12 +29,10 @@ license-file = ["LICENSE"]
 section = "devel"
 priority = "optional"
 depends = "$auto"
-extended-description = """pycompile translates a supported subset of Python into C, invokes the system C compiler, and emits a standalone native executable. It also installs the python_compiler command."""
+extended-description = """pycompile translates a supported subset of Python into C, invokes the system C compiler, and emits a standalone native executable."""
 assets = [
     ["target/release/pycompile", "usr/bin/", "755"],
-    ["target/release/python_compiler", "usr/bin/", "755"],
     ["docs/pycompile.1", "usr/share/man/man1/pycompile.1", "644"],
-    ["docs/pycompile.1", "usr/share/man/man1/python_compiler.1", "644"],
     ["README.md", "usr/share/doc/pycompile/README.md", "644"],
 ]
 
@@ -50,7 +44,5 @@ url = "https://github.com/ramackersjp/pycompile"
 vendor = "J.P. Ramackers"
 assets = [
     { source = "target/release/pycompile", dest = "/usr/bin/pycompile", mode = "755" },
-    { source = "target/release/python_compiler", dest = "/usr/bin/python_compiler", mode = "755" },
     { source = "docs/pycompile.1", dest = "/usr/share/man/man1/pycompile.1", mode = "644" },
-    { source = "docs/pycompile.1", dest = "/usr/share/man/man1/python_compiler.1", mode = "644" },
 ]

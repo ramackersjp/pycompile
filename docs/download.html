@@ -24,7 +24,7 @@
     <div class="container">
       <h1 style="font-size:38px;margin:0 0 8px;">Download</h1>
       <p class="sub">Grab a prebuilt binary for your platform, or build from source with Cargo.
-      Every archive contains both <code>pycompile</code> and <code>python_compiler</code>.</p>
+      Every archive contains the <code>pycompile</code> binary.</p>
 
       <div class="grid grid-2">
         <div class="card">
@@ -71,8 +71,8 @@
       executable on Unix-like systems:</p>
       <pre style="background:var(--code-bg);color:var(--code-text);padding:16px;border-radius:10px;overflow-x:auto;"><code><span class="tok-c"># Linux / macOS</span>
 tar -xzf pycompile-x86_64-unknown-linux-gnu.tar.gz
-chmod +x pycompile python_compiler
-sudo mv pycompile python_compiler /usr/local/bin/
+chmod +x pycompile
+sudo mv pycompile /usr/local/bin/
 
 <span class="tok-c"># Windows (PowerShell)</span>
 Expand-Archive pycompile-x86_64-pc-windows-msvc.zip -DestinationPath C:\tools\pycompile</code></pre>

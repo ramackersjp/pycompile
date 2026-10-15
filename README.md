@@ -2,10 +2,9 @@
 
 Compile Python into standalone native binaries.
 
-`pycompile` (also installed as `python_compiler`) is an ahead-of-time compiler that
-translates a supported subset of Python into C, invokes the system C compiler, and
-emits a single standalone executable. No interpreter, no runtime to install — the
-result runs on its own.
+`pycompile` is an ahead-of-time compiler that translates a supported subset of Python
+into C, invokes the system C compiler, and emits a single standalone executable. No
+interpreter, no runtime to install — the result runs on its own.
 
 ```
 $ pycompile hello.py -o hello
@@ -27,7 +26,7 @@ Hello, World!
 cargo install python-compiler
 ```
 
-This installs two identical commands, `pycompile` and `python_compiler`.
+This installs the `pycompile` command.
 
 ### From source
 
@@ -54,7 +53,6 @@ pycompile man --install --prefix ~/.local
 
 ```
 pycompile [OPTIONS] <INPUT> [-- PROGRAM_ARGS...]
-python_compiler [OPTIONS] <INPUT> [-- PROGRAM_ARGS...]
 pycompile man [--install] [--prefix DIR]
 ```
 
@@ -91,22 +89,40 @@ Compiles to native code:
 - Calls with positional, keyword, `*` and `**` arguments
 - Chained comparisons, `in` / `not in`, `is` / `is not`, `and`, `or`, `not`
 - Slicing and item assignment, augmented assignment
+- `%` string formatting (positional and mapping forms, flags, width, precision)
+- `lambda` expressions, nested functions and closures (including late binding and
+  `sorted(..., key=lambda ...)`)
+- `try` / `except` / `except ... as name` / `else` / `finally`, `raise` (bare and
+  `raise E(...)`), `assert`, and catchable built-in exception types (with their
+  inheritance hierarchy, e.g. `except ArithmeticError` catches `ZeroDivisionError`)
+- Stable `sort` / `sorted` with `reverse=True` and `key=`
+- `class` definitions with methods, `__init__`, class and instance attributes,
+  single inheritance, `isinstance`, and the `__str__`, `__repr__`, `__eq__`,
+  `__len__`, `__getitem__`, `__setitem__` and `__contains__` protocols
 - The `math` and `sys` modules
 
 Not yet supported (reported as clear compile errors):
 
-- `class`, closures and nested scopes
-- `try` / `except` / `finally`, `with`, `raise`
-- Decorators, `lambda`, `async` / `await`
+- `super()`, multiple inheritance, decorators (`@staticmethod`, `@classmethod`),
+  operator overloading beyond `__eq__` and `__len__`
+- `with`, generators, `async` / `await`
+- `return`, `break` or `continue` inside a `try` that has a `finally` clause
 - Modules other than `math` and `sys`
 
 ## Runtime model
 
-Values are heap-allocated tagged objects. Memory is **not** garbage collected;
-allocations live until process exit. This keeps the compiler simple and the output
-small, and is fine for typical short-lived CLI programs.
+Values are heap-allocated tagged objects. A conservative mark-and-sweep garbage
+collector reclaims unreachable objects: it scans the C stack, the program's global
+variables and a few runtime roots, marks everything reachable and frees the rest.
+Reference cycles that stay unreachable are collected too. The collector is
+conservative, so an object can occasionally be kept alive a little longer than
+strictly necessary; this is safe and keeps the generated code unchanged.
 
-Runtime errors print a Python-style traceback to stderr and exit with status 1.
+Runtime errors raise the corresponding built-in exception (for example
+`ZeroDivisionError`, `IndexError`, `KeyError`, `TypeError`, `ValueError`,
+`AssertionError` and `RuntimeError`), which can be caught with `try` / `except`.
+An uncaught exception prints a Python-style traceback to stderr and exits with
+status 1.
 
 ## Examples
 

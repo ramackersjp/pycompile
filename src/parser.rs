@@ -1,6 +1,13 @@
 use crate::ast::*;
 use crate::error::{CompileError, Result};
 use crate::lexer::{Lexer, Tok, Token};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static FUNC_ID: AtomicUsize = AtomicUsize::new(0);
+
+fn next_func_id() -> usize {
+    FUNC_ID.fetch_add(1, Ordering::Relaxed)
+}
 
 /// Parse a single Python expression, used for f-string replacement fields.
 pub fn parse_expression(src: &str, file: &str) -> Result<Expr> {
@@ -162,7 +169,13 @@ impl<'a> Parser<'a> {
         if self.at_kw("def") {
             return self.parse_def();
         }
-        if self.at_kw("with") || self.at_kw("try") || self.at_kw("class") || self.at_kw("async") {
+        if self.at_kw("try") {
+            return self.parse_try();
+        }
+        if self.at_kw("class") {
+            return self.parse_class();
+        }
+        if self.at_kw("with") || self.at_kw("async") {
             return Err(self.err(format!(
                 "'{}' statements are not supported by this compiler yet",
                 if let Tok::Keyword(k) = self.tok() {
@@ -244,7 +257,26 @@ impl<'a> Parser<'a> {
             }
             return Ok(Stmt::Del(targets));
         }
-        if self.at_kw("raise") || self.at_kw("yield") {
+        if self.at_kw("raise") {
+            self.advance();
+            if matches!(self.tok(), Tok::Newline | Tok::Eof) {
+                return Ok(Stmt::Raise {
+                    exc: None,
+                    cause: None,
+                });
+            }
+            let exc = self.parse_test()?;
+            let cause = if self.eat_kw("from") {
+                Some(self.parse_test()?)
+            } else {
+                None
+            };
+            return Ok(Stmt::Raise {
+                exc: Some(exc),
+                cause,
+            });
+        }
+        if self.at_kw("yield") {
             return Err(self.err("this statement is not supported by this compiler yet"));
         }
         self.parse_expr_or_assign()
@@ -408,14 +440,97 @@ impl<'a> Parser<'a> {
         Ok(Vec::new())
     }
 
-    fn parse_def(&mut self) -> Result<Stmt> {
-        self.expect_kw("def")?;
+    fn parse_class(&mut self) -> Result<Stmt> {
+        self.expect_kw("class")?;
         let name = self.expect_name()?;
-        self.expect_op("(")?;
+        let mut bases = Vec::new();
+        if self.eat_op("(") {
+            if !self.at_op(")") {
+                loop {
+                    bases.push(self.parse_test()?);
+                    if !self.eat_op(",") {
+                        break;
+                    }
+                    if self.at_op(")") {
+                        break;
+                    }
+                }
+            }
+            self.expect_op(")")?;
+        }
+        if self.eat_op(":") {
+            let body = self.parse_suite()?;
+            return Ok(Stmt::ClassDef {
+                id: next_func_id(),
+                name,
+                bases,
+                body,
+            });
+        }
+        Err(self.err("expected ':' after class definition"))
+    }
+
+    fn parse_try(&mut self) -> Result<Stmt> {
+        self.expect_kw("try")?;
+        self.expect_op(":")?;
+        let body = self.parse_suite()?;
+        let mut handlers = Vec::new();
+        while self.at_kw("except") {
+            self.advance();
+            let typ = if self.at_op(":") {
+                None
+            } else {
+                Some(self.parse_test()?)
+            };
+            let name = if self.eat_kw("as") {
+                Some(self.expect_name()?)
+            } else {
+                None
+            };
+            self.expect_op(":")?;
+            let hbody = self.parse_suite()?;
+            handlers.push(ExceptHandler {
+                typ,
+                name,
+                body: hbody,
+            });
+        }
+        let orelse = if self.at_kw("else") {
+            self.advance();
+            self.expect_op(":")?;
+            self.parse_suite()?
+        } else {
+            Vec::new()
+        };
+        let finally = if self.at_kw("finally") {
+            self.advance();
+            self.expect_op(":")?;
+            self.parse_suite()?
+        } else {
+            Vec::new()
+        };
+        if handlers.is_empty() && finally.is_empty() {
+            return Err(self.err("'try' must have an 'except' or 'finally' clause"));
+        }
+        if handlers.is_empty() && !orelse.is_empty() {
+            return Err(self.err("'else' clause requires an 'except' clause"));
+        }
+        Ok(Stmt::Try {
+            body,
+            handlers,
+            orelse,
+            finally,
+        })
+    }
+
+    fn parse_params(
+        &mut self,
+        annot: bool,
+    ) -> Result<(Vec<Param>, Option<String>, Option<String>)> {
         let mut params = Vec::new();
         let mut vararg = None;
         let mut kwarg = None;
-        while !self.at_op(")") {
+        while !self.at_op(")") && !self.at_op(":") {
             if self.at_op("**") {
                 self.advance();
                 kwarg = Some(self.expect_name()?);
@@ -436,7 +551,7 @@ impl<'a> Parser<'a> {
                 return Err(self.err("positional-only markers are not supported"));
             }
             let pname = self.expect_name()?;
-            if self.eat_op(":") {
+            if annot && self.eat_op(":") {
                 let _ = self.parse_test()?;
             }
             let default = if self.eat_op("=") {
@@ -452,6 +567,14 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
+        Ok((params, vararg, kwarg))
+    }
+
+    fn parse_def(&mut self) -> Result<Stmt> {
+        self.expect_kw("def")?;
+        let name = self.expect_name()?;
+        self.expect_op("(")?;
+        let (params, vararg, kwarg) = self.parse_params(true)?;
         self.expect_op(")")?;
         if self.eat_op("->") {
             let _ = self.parse_test()?;
@@ -459,11 +582,26 @@ impl<'a> Parser<'a> {
         self.expect_op(":")?;
         let body = self.parse_suite()?;
         Ok(Stmt::FunctionDef {
+            id: next_func_id(),
             name,
             params,
             vararg,
             kwarg,
             body,
+        })
+    }
+
+    fn parse_lambda(&mut self) -> Result<Expr> {
+        self.expect_kw("lambda")?;
+        let (params, vararg, kwarg) = self.parse_params(false)?;
+        self.expect_op(":")?;
+        let body = self.parse_test()?;
+        Ok(Expr::Lambda {
+            id: next_func_id(),
+            params,
+            vararg,
+            kwarg,
+            body: Box::new(body),
         })
     }
 
@@ -551,6 +689,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_test(&mut self) -> Result<Expr> {
+        if self.at_kw("lambda") {
+            return self.parse_lambda();
+        }
         let body = self.parse_or()?;
         if self.at_kw("if") {
             self.advance();

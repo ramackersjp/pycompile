@@ -4,12 +4,11 @@ Guidance for AI coding agents working in this repository.
 
 ## Project overview
 
-`pycompile` (also installed as `python_compiler`) is an ahead-of-time compiler that
-translates a supported subset of Python into C, invokes the system C compiler, and
-emits a single standalone native executable. There is no interpreter at run time.
+`pycompile` is an ahead-of-time compiler that translates a supported subset of Python
+into C, invokes the system C compiler, and emits a single standalone native executable.
+There is no interpreter at run time.
 
-- Crate: `python-compiler`, library `python_compiler`, binaries `pycompile` and
-  `python_compiler`.
+- Crate: `python-compiler`, library and binary `pycompile`.
 - Zero external Rust dependencies. Edition 2021.
 - Release profile uses LTO, `codegen-units = 1` and stripping for small binaries.
 

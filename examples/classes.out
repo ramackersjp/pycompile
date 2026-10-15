@@ -1,0 +1,8 @@
+circle:c1 area 12
+rect:r1 area 12
+shape:base area 0
+circle rect shape
+big-circle circle
+True True False
+Counter(1) Counter(2) Counter(3)
+3 a c True False

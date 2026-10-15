@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,11 +32,19 @@ enum {
     PY_SET,
     PY_RANGE,
     PY_FUNC,
-    PY_ITER
+    PY_ITER,
+    PY_CELL,
+    PY_EXC_TYPE,
+    PY_EXCEPTION,
+    PY_CLASS,
+    PY_INSTANCE,
+    PY_BOUND
 };
 
 struct Pyo {
     int kind;
+    struct Pyo* gc_next;
+    int gc_mark;
     union {
         int b;
         long long i;
@@ -74,31 +83,229 @@ struct Pyo {
             int vararg;
             int kwarg;
             int is_builtin;
+            Pyo** cells;
+            int ncells;
         } func;
         struct {
             Pyo* src;
             long long idx;
         } iter;
+        struct {
+            Pyo* value;
+        } cell;
+        struct {
+            const char* name;
+            Pyo* base;
+        } exc_type;
+        struct {
+            Pyo* type;
+            Pyo* args;
+        } exc;
+        struct {
+            const char* name;
+            Pyo* base;
+            Pyo* dict;
+        } cls;
+        struct {
+            Pyo* cls;
+            Pyo* dict;
+        } inst;
+        struct {
+            Pyo* func;
+            Pyo* self;
+        } bound;
     } u;
 };
 
 static long long range_len(Pyo* r);
+static int py_equal(Pyo* a, Pyo* b);
+static void py_raise_fmt(Pyo* type, const char* fmt, va_list ap);
+static void raise_kind(const char* t, const char* fmt, ...);
+static void exc_init(void);
+static Pyo* exc_new(Pyo* type, Pyo* args);
+static Pyo* cls_lookup(Pyo* cls, const char* name);
+static Pyo* bound_new(Pyo* func, Pyo* self);
+static Pyo* instance_new(Pyo* cls);
+static void raise_key_error(Pyo* key);
 
-void py_runtime_error(const char* fmt, ...) {    va_list ap;
-    fputs("Traceback (most recent call last):\n", stderr);
-    fputs("RuntimeError: ", stderr);
+/* ---------------- conservative mark-and-sweep garbage collector ----------------
+ * Objects allocated by py_new form an intrusive list. Collection scans the C
+ * stack, a set of registered global roots and a few runtime-internal roots for
+ * pointers that point at tracked objects, marks everything reachable and frees
+ * the rest. No precise type information is needed on the stack (conservative),
+ * so the generated code stays unchanged apart from registering its globals. */
+
+static Pyo* g_gc_head = NULL;
+static Pyo** g_gc_set = NULL;
+static size_t g_gc_cap = 0;
+static size_t g_gc_live = 0;
+static size_t g_gc_threshold = 200000;
+static char* g_stack_base = NULL;
+static Pyo*** g_roots = NULL;
+static size_t g_roots_len = 0, g_roots_cap = 0;
+typedef struct {
+    char* lo;
+    char* hi;
+} GcRegion;
+static GcRegion* g_regions = NULL;
+static size_t g_regions_len = 0, g_regions_cap = 0;
+static Pyo** g_work = NULL;
+static size_t g_work_len = 0, g_work_cap = 0;
+
+static void gc_collect(void);
+static void py_gc_maybe(void);
+
+static size_t gc_hash(const void* p) {
+    uintptr_t x = (uintptr_t)p >> 4;
+    x *= (uintptr_t)0x9E3779B97F4A7C15ULL;
+    return (size_t)(x ^ (x >> 29));
+}
+
+static void gc_set_put(Pyo* o) {
+    if (!g_gc_set) {
+        g_gc_cap = 1024;
+        g_gc_set = (Pyo**)calloc(g_gc_cap, sizeof(Pyo*));
+        if (!g_gc_set) py_runtime_error("out of memory");
+    }
+    if ((g_gc_live + 1) * 10 >= g_gc_cap * 7) {
+        size_t ncap = g_gc_cap * 2;
+        Pyo** ns = (Pyo**)calloc(ncap, sizeof(Pyo*));
+        if (!ns) py_runtime_error("out of memory");
+        for (size_t i = 0; i < g_gc_cap; i++) {
+            if (g_gc_set[i]) {
+                size_t j = gc_hash(g_gc_set[i]) & (ncap - 1);
+                while (ns[j]) j = (j + 1) & (ncap - 1);
+                ns[j] = g_gc_set[i];
+            }
+        }
+        free(g_gc_set);
+        g_gc_set = ns;
+        g_gc_cap = ncap;
+    }
+    size_t i = gc_hash(o) & (g_gc_cap - 1);
+    while (g_gc_set[i]) i = (i + 1) & (g_gc_cap - 1);
+    g_gc_set[i] = o;
+}
+
+static int gc_set_has(Pyo* o) {
+    if (!g_gc_set || !o) return 0;
+    size_t i = gc_hash(o) & (g_gc_cap - 1);
+    while (g_gc_set[i]) {
+        if (g_gc_set[i] == o) return 1;
+        i = (i + 1) & (g_gc_cap - 1);
+    }
+    return 0;
+}
+
+static void gc_push(Pyo* o) {
+    if (!o || o->gc_mark || !gc_set_has(o)) return;
+    o->gc_mark = 1;
+    if (g_work_len == g_work_cap) {
+        g_work_cap = g_work_cap ? g_work_cap * 2 : 1024;
+        g_work = (Pyo**)realloc(g_work, g_work_cap * sizeof(Pyo*));
+        if (!g_work) py_runtime_error("out of memory");
+    }
+    g_work[g_work_len++] = o;
+}
+
+static void gc_scan_children(Pyo* o) {
+    long long i;
+    switch (o->kind) {
+        case PY_LIST:
+        case PY_SET:
+            for (i = 0; i < o->u.list.len; i++) gc_push(o->u.list.items[i]);
+            break;
+        case PY_TUPLE:
+            for (i = 0; i < o->u.tuple.len; i++) gc_push(o->u.tuple.items[i]);
+            break;
+        case PY_DICT:
+            for (i = 0; i < o->u.dict.len; i++) {
+                gc_push(o->u.dict.keys[i]);
+                gc_push(o->u.dict.vals[i]);
+            }
+            break;
+        case PY_FUNC:
+            for (i = 0; i < o->u.func.ndefaults; i++) gc_push(o->u.func.defaults[i]);
+            for (i = 0; i < o->u.func.ncells; i++) gc_push(o->u.func.cells[i]);
+            break;
+        case PY_ITER:
+            gc_push(o->u.iter.src);
+            break;
+        case PY_CELL:
+            gc_push(o->u.cell.value);
+            break;
+        case PY_EXC_TYPE:
+            gc_push(o->u.exc_type.base);
+            break;
+        case PY_EXCEPTION:
+            gc_push(o->u.exc.type);
+            gc_push(o->u.exc.args);
+            break;
+        case PY_CLASS:
+            gc_push(o->u.cls.base);
+            gc_push(o->u.cls.dict);
+            break;
+        case PY_INSTANCE:
+            gc_push(o->u.inst.cls);
+            gc_push(o->u.inst.dict);
+            break;
+        case PY_BOUND:
+            gc_push(o->u.bound.func);
+            gc_push(o->u.bound.self);
+            break;
+        default:
+            break;
+    }
+}
+
+static void gc_free_obj(Pyo* o) {
+    switch (o->kind) {
+        case PY_STR:
+            free(o->u.str.s);
+            break;
+        case PY_LIST:
+        case PY_SET:
+            free(o->u.list.items);
+            break;
+        case PY_TUPLE:
+            free(o->u.tuple.items);
+            break;
+        case PY_DICT:
+            free(o->u.dict.keys);
+            free(o->u.dict.vals);
+            break;
+        case PY_FUNC:
+            free((void*)o->u.func.params);
+            free(o->u.func.defaults);
+            free(o->u.func.cells);
+            break;
+        default:
+            break;
+    }
+    free(o);
+}
+
+static void py_gc_maybe(void) {
+    if (g_stack_base && g_gc_live >= g_gc_threshold) gc_collect();
+}
+
+void py_runtime_error(const char* fmt, ...) {
+    va_list ap;
     va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    py_raise_fmt(py_exc_ref("RuntimeError"), fmt, ap);
     va_end(ap);
-    fputc('\n', stderr);
-    exit(1);
 }
 
 static Pyo* py_new(int kind) {
+    py_gc_maybe();
     Pyo* o = (Pyo*)malloc(sizeof(Pyo));
     if (!o) py_runtime_error("out of memory");
     memset(o, 0, sizeof(Pyo));
     o->kind = kind;
+    o->gc_next = g_gc_head;
+    g_gc_head = o;
+    g_gc_live++;
+    gc_set_put(o);
     return o;
 }
 
@@ -212,15 +419,50 @@ Pyo* py_func(PyFn fn, const char* name, const char** params, int nparams,
     Pyo* o = py_new(PY_FUNC);
     o->u.func.fn = fn;
     o->u.func.name = name;
-    o->u.func.params = params;
     o->u.func.nparams = nparams;
-    o->u.func.defaults = defaults;
     o->u.func.ndefaults = ndefaults;
     o->u.func.vararg = vararg;
     o->u.func.kwarg = kwarg;
     o->u.func.is_builtin = 0;
+    o->u.func.cells = NULL;
+    o->u.func.ncells = 0;
+    if (nparams > 0) {
+        o->u.func.params = (const char**)malloc((size_t)nparams * sizeof(char*));
+        if (!o->u.func.params) py_runtime_error("out of memory");
+        memcpy(o->u.func.params, params, (size_t)nparams * sizeof(char*));
+    } else {
+        o->u.func.params = NULL;
+    }
+    if (ndefaults > 0) {
+        o->u.func.defaults = (Pyo**)malloc((size_t)ndefaults * sizeof(Pyo*));
+        if (!o->u.func.defaults) py_runtime_error("out of memory");
+        memcpy(o->u.func.defaults, defaults, (size_t)ndefaults * sizeof(Pyo*));
+    } else {
+        o->u.func.defaults = NULL;
+    }
     return o;
 }
+
+Pyo* py_closure(PyFn fn, const char* name, const char** params, int nparams,
+                Pyo** defaults, int ndefaults, int vararg, int kwarg,
+                Pyo** cells, int ncells) {
+    Pyo* o = py_func(fn, name, params, nparams, defaults, ndefaults, vararg, kwarg);
+    if (ncells > 0) {
+        o->u.func.cells = (Pyo**)malloc((size_t)ncells * sizeof(Pyo*));
+        if (!o->u.func.cells) py_runtime_error("out of memory");
+        memcpy(o->u.func.cells, cells, (size_t)ncells * sizeof(Pyo*));
+    }
+    o->u.func.ncells = ncells;
+    return o;
+}
+
+Pyo* py_cell_new(Pyo* value) {
+    Pyo* o = py_new(PY_CELL);
+    o->u.cell.value = value;
+    return o;
+}
+Pyo* py_cell_get(Pyo* cell) { return cell->u.cell.value; }
+void py_cell_set(Pyo* cell, Pyo* value) { cell->u.cell.value = value; }
 
 Pyo* py_builtin_ref(const char* name) {
     Pyo* o = py_new(PY_FUNC);
@@ -233,6 +475,8 @@ Pyo* py_builtin_ref(const char* name) {
     o->u.func.vararg = 1;
     o->u.func.kwarg = 0;
     o->u.func.is_builtin = 1;
+    o->u.func.cells = NULL;
+    o->u.func.ncells = 0;
     return o;
 }
 
@@ -392,6 +636,47 @@ static void to_buf(SB* b, Pyo* v, int repr) {
         case PY_ITER:
             sb_puts(b, "<iterator>");
             break;
+        case PY_EXC_TYPE:
+            snprintf(tmp, sizeof(tmp), "<class '%s'>", v->u.exc_type.name);
+            sb_puts(b, tmp);
+            break;
+        case PY_EXCEPTION:
+            if (repr) {
+                sb_puts(b, v->u.exc.type->u.exc_type.name);
+                sb_putc(b, '(');
+                to_buf(b, v->u.exc.args, 1);
+                sb_putc(b, ')');
+            } else if (v->u.exc.args->u.tuple.len == 0) {
+                sb_puts(b, "");
+            } else if (v->u.exc.args->u.tuple.len == 1 && v->u.exc.type == py_exc_ref("KeyError")) {
+                to_buf(b, v->u.exc.args->u.tuple.items[0], 1);
+            } else if (v->u.exc.args->u.tuple.len == 1) {
+                to_buf(b, v->u.exc.args->u.tuple.items[0], 0);
+            } else {
+                to_buf(b, v->u.exc.args, 0);
+            }
+            break;
+        case PY_CLASS:
+            snprintf(tmp, sizeof(tmp), "<class '%s'>", v->u.cls.name);
+            sb_puts(b, tmp);
+            break;
+        case PY_INSTANCE: {
+            Pyo* m = cls_lookup(v->u.inst.cls, repr ? "__repr__" : "__str__");
+            if (!m) m = cls_lookup(v->u.inst.cls, "__repr__");
+            if (m) {
+                Pyo* r = py_call(bound_new(m, v), NULL, 0);
+                to_buf(b, r, 0);
+                break;
+            }
+            snprintf(tmp, sizeof(tmp), "<%s object>", v->u.inst.cls->u.cls.name);
+            sb_puts(b, tmp);
+            break;
+        }
+        case PY_BOUND:
+            snprintf(tmp, sizeof(tmp), "<bound method %s>",
+                     v->u.bound.func->u.func.name ? v->u.bound.func->u.func.name : "?");
+            sb_puts(b, tmp);
+            break;
         default:
             sb_puts(b, "<object>");
             break;
@@ -414,9 +699,9 @@ void py_assert(int cond, Pyo* msg) {
     if (cond) return;
     if (msg && msg->kind != PY_NONE) {
         Pyo* s = to_string(msg, 0);
-        py_runtime_error("AssertionError: %.*s", (int)s->u.str.len, s->u.str.s);
+        raise_kind("AssertionError", "%.*s", (int)s->u.str.len, s->u.str.s);
     }
-    py_runtime_error("AssertionError");
+    raise_kind("AssertionError", "%s", "");
 }
 
 /* ---------------- numeric helpers ---------------- */
@@ -452,10 +737,19 @@ static const char* kind_name(int k) {
         case PY_RANGE: return "range";
         case PY_FUNC: return "function";
         case PY_ITER: return "iterator";
+        case PY_CELL: return "cell";
+        case PY_EXC_TYPE: return "type";
+        case PY_EXCEPTION: return "exception";
+        case PY_CLASS: return "type";
+        case PY_INSTANCE: return "object";
+        case PY_BOUND: return "method";
         default: return "slice";
     }
 }
-Pyo* py_type(Pyo* x) { return py_str(kind_name(x->kind)); }
+Pyo* py_type(Pyo* x) {
+    if (x->kind == PY_INSTANCE) return py_str(x->u.inst.cls->u.cls.name);
+    return py_str(kind_name(x->kind));
+}
 
 /* ---------------- operators ---------------- */
 static Pyo* repeat(Pyo* a, long long n) {
@@ -543,42 +837,217 @@ Pyo* py_mul(Pyo* a, Pyo* b) {
 Pyo* py_div(Pyo* a, Pyo* b) {
     if (!is_num(a) || !is_num(b)) py_runtime_error("unsupported operand type(s) for /");
     double d = as_double(b);
-    if (d == 0.0) py_runtime_error("division by zero");
+    if (d == 0.0) raise_kind("ZeroDivisionError", "division by zero");
     return py_float(as_double(a) / d);
 }
 
 Pyo* py_floordiv(Pyo* a, Pyo* b) {
     if (both_int(a, b)) {
         long long x = as_int(a), y = as_int(b);
-        if (y == 0) py_runtime_error("integer division or modulo by zero");
+        if (y == 0) raise_kind("ZeroDivisionError", "division by zero");
         long long q = x / y;
         if ((x % y != 0) && ((x < 0) != (y < 0))) q--;
         return py_int(q);
     }
     if (!is_num(a) || !is_num(b)) py_runtime_error("unsupported operand type(s) for //");
     double y = as_double(b);
-    if (y == 0.0) py_runtime_error("float floor division by zero");
+    if (y == 0.0) raise_kind("ZeroDivisionError", "division by zero");
     return py_float(floor(as_double(a) / y));
+}
+
+/* printf-style "%" formatting, used when the left operand is a string. */
+static Pyo* percent_format(Pyo* fmt, Pyo* args) {
+    SB out;
+    sb_init(&out);
+    const char* s = fmt->u.str.s;
+    long long n = fmt->u.str.len;
+    int is_tuple = args->kind == PY_TUPLE;
+    long long tcount = is_tuple ? args->u.tuple.len : 0;
+    long long ai = 0;
+    long long i = 0;
+    while (i < n) {
+        if (s[i] != '%') {
+            sb_putc(&out, s[i++]);
+            continue;
+        }
+        i++;
+        if (i >= n) py_runtime_error("incomplete format");
+        if (s[i] == '%') {
+            sb_putc(&out, '%');
+            i++;
+            continue;
+        }
+        Pyo* arg = NULL;
+        if (s[i] == '(') {
+            long long j = i + 1;
+            while (j < n && s[j] != ')') j++;
+            if (j >= n) py_runtime_error("incomplete format key");
+            if (args->kind != PY_DICT) py_runtime_error("format requires a mapping");
+            Pyo* key = py_strn(s + i + 1, j - i - 1);
+            int found = 0;
+            for (long long k = 0; k < args->u.dict.len; k++)
+                if (py_equal(args->u.dict.keys[k], key)) {
+                    arg = args->u.dict.vals[k];
+                    found = 1;
+                    break;
+                }
+            if (!found) raise_key_error(py_strn(s + i + 1, j - i - 1));
+            i = j + 1;
+        }
+        int left = 0, zero = 0, plus = 0, space = 0, alt = 0;
+        while (i < n) {
+            char f = s[i];
+            if (f == '-') left = 1;
+            else if (f == '0') zero = 1;
+            else if (f == '+') plus = 1;
+            else if (f == ' ') space = 1;
+            else if (f == '#') alt = 1;
+            else break;
+            i++;
+        }
+        int width = 0;
+        while (i < n && isdigit((unsigned char)s[i])) width = width * 10 + (s[i++] - '0');
+        int prec = -1;
+        if (i < n && s[i] == '.') {
+            i++;
+            prec = 0;
+            while (i < n && isdigit((unsigned char)s[i])) prec = prec * 10 + (s[i++] - '0');
+        }
+        while (i < n && (s[i] == 'h' || s[i] == 'l' || s[i] == 'L')) i++;
+        if (i >= n) py_runtime_error("incomplete format");
+        char conv = s[i++];
+        if (!arg) {
+            if (is_tuple) {
+                if (ai >= tcount) py_runtime_error("not enough arguments for format string");
+                arg = args->u.tuple.items[ai++];
+            } else {
+                arg = args;
+            }
+        }
+
+        SB body;
+        sb_init(&body);
+        int numeric = 0;
+        char num[128];
+        switch (conv) {
+            case 's':
+            case 'r':
+            case 'a': {
+                Pyo* t = to_string(arg, conv == 's' ? 0 : 1);
+                long long len = (prec >= 0 && t->u.str.len > prec) ? prec : t->u.str.len;
+                sb_putn(&body, t->u.str.s, (size_t)len);
+                break;
+            }
+            case 'd':
+            case 'i':
+            case 'u': {
+                long long v = as_int(arg);
+                int ndig = 0;
+                char digs[64];
+                unsigned long long uv = (unsigned long long)(v < 0 ? -v : v);
+                do {
+                    digs[ndig++] = (char)('0' + (uv % 10));
+                    uv /= 10;
+                } while (uv);
+                int digits = ndig > prec ? ndig : prec;
+                if (v < 0) sb_putc(&body, '-');
+                else if (plus) sb_putc(&body, '+');
+                else if (space) sb_putc(&body, ' ');
+                for (int k = ndig; k < digits; k++) sb_putc(&body, '0');
+                while (ndig > 0) sb_putc(&body, digs[--ndig]);
+                numeric = 1;
+                break;
+            }
+            case 'x':
+            case 'X': {
+                unsigned long long v = (unsigned long long)as_int(arg);
+                if (alt) sb_puts(&body, conv == 'x' ? "0x" : "0X");
+                snprintf(num, sizeof(num), conv == 'x' ? "%llx" : "%llX", v);
+                int ndig = (int)strlen(num);
+                for (int k = ndig; k < prec; k++) sb_putc(&body, '0');
+                sb_puts(&body, num);
+                numeric = 1;
+                break;
+            }
+            case 'o': {
+                snprintf(num, sizeof(num), "%llo", (unsigned long long)as_int(arg));
+                if (alt) sb_puts(&body, "0o");
+                int ndig = (int)strlen(num);
+                for (int k = ndig; k < prec; k++) sb_putc(&body, '0');
+                sb_puts(&body, num);
+                numeric = 1;
+                break;
+            }
+            case 'f':
+            case 'F':
+            case 'e':
+            case 'E':
+            case 'g':
+            case 'G': {
+                double d = as_double(arg);
+                int p = prec >= 0 ? prec : 6;
+                char fmtbuf[16];
+                snprintf(fmtbuf, sizeof(fmtbuf), "%%%s%s.%d%c", plus ? "+" : (space ? " " : ""),
+                         alt ? "#" : "", p, conv);
+                snprintf(num, sizeof(num), fmtbuf, d);
+                sb_puts(&body, num);
+                numeric = 1;
+                break;
+            }
+            case 'c': {
+                if (arg->kind == PY_STR && arg->u.str.len >= 1) sb_putc(&body, arg->u.str.s[0]);
+                else sb_putc(&body, (char)as_int(arg));
+                break;
+            }
+            default:
+                py_runtime_error("unsupported format character '%c'", conv);
+        }
+
+        long long blen = (long long)body.len;
+        if (width > blen) {
+            int pad = (int)(width - blen);
+            if (left) {
+                sb_putn(&out, body.data ? body.data : "", (size_t)blen);
+                for (int k = 0; k < pad; k++) sb_putc(&out, ' ');
+            } else if (zero && numeric) {
+                const char* p = body.data ? body.data : "";
+                if (*p == '-' || *p == '+' || *p == ' ') {
+                    sb_putc(&out, *p);
+                    p++;
+                }
+                for (int k = 0; k < pad; k++) sb_putc(&out, '0');
+                sb_puts(&out, p);
+            } else {
+                for (int k = 0; k < pad; k++) sb_putc(&out, ' ');
+                sb_putn(&out, body.data ? body.data : "", (size_t)blen);
+            }
+        } else {
+            sb_putn(&out, body.data ? body.data : "", (size_t)blen);
+        }
+        free(body.data);
+    }
+    if (is_tuple && ai != tcount) py_runtime_error("not all arguments converted during string formatting");
+    Pyo* result = py_strn(out.data ? out.data : "", out.data ? (long long)out.len : 0);
+    free(out.data);
+    return result;
 }
 
 Pyo* py_mod(Pyo* a, Pyo* b) {
     if (both_int(a, b)) {
         long long x = as_int(a), y = as_int(b);
-        if (y == 0) py_runtime_error("integer division or modulo by zero");
+        if (y == 0) raise_kind("ZeroDivisionError", "division by zero");
         long long r = x % y;
         if (r != 0 && ((r < 0) != (y < 0))) r += y;
         return py_int(r);
     }
     if (is_num(a) && is_num(b)) {
         double y = as_double(b);
-        if (y == 0.0) py_runtime_error("float modulo by zero");
+        if (y == 0.0) raise_kind("ZeroDivisionError", "division by zero");
         double r = fmod(as_double(a), y);
         if (r != 0.0 && ((r < 0) != (y < 0))) r += y;
         return py_float(r);
     }
-    if (a->kind == PY_STR) {
-        py_runtime_error("%% string formatting is not supported; use f-strings");
-    }
+    if (a->kind == PY_STR) return percent_format(a, b);
     py_runtime_error("unsupported operand type(s) for %%");
     return py_none();
 }
@@ -702,6 +1171,16 @@ static int dict_equal(Pyo* a, Pyo* b) {
 static int py_equal(Pyo* a, Pyo* b) {
     if (a == b) return 1;
     if (is_num(a) && is_num(b)) return as_double(a) == as_double(b);
+    if (a->kind == PY_INSTANCE && b->kind == PY_INSTANCE) {
+        if (a->u.inst.cls == b->u.inst.cls) {
+            Pyo* m = cls_lookup(a->u.inst.cls, "__eq__");
+            if (m) {
+                Pyo* args[1] = {b};
+                return py_truth(py_call(bound_new(m, a), args, 1));
+            }
+        }
+        return 0;
+    }
     if (a->kind != b->kind) return 0;
     switch (a->kind) {
         case PY_NONE: return 1;
@@ -803,6 +1282,16 @@ int py_contains_impl(Pyo* container, Pyo* item) {
             if (st < 0) return v <= s && v > e && (s - v) % (-st) == 0;
             return 0;
         }
+        case PY_INSTANCE: {
+            Pyo* m = cls_lookup(container->u.inst.cls, "__contains__");
+            if (m) {
+                Pyo* args[1] = {item};
+                return py_truth(py_call(bound_new(m, container), args, 1));
+            }
+            py_runtime_error("argument of type '%s' is not iterable",
+                             container->u.inst.cls->u.cls.name);
+            return 0;
+        }
         default:
             py_runtime_error("argument of type '%s' is not iterable", kind_name(container->kind));
             return 0;
@@ -819,6 +1308,12 @@ Pyo* py_len(Pyo* o) {
         case PY_DICT: return py_int(o->u.dict.len);
         case PY_SET: return py_int(o->u.set.len);
         case PY_RANGE: return py_int(range_len(o));
+        case PY_INSTANCE: {
+            Pyo* m = cls_lookup(o->u.inst.cls, "__len__");
+            if (m) return py_int(as_int(py_call(bound_new(m, o), NULL, 0)));
+            py_runtime_error("object of type '%s' has no len()", o->u.inst.cls->u.cls.name);
+            return py_none();
+        }
         default:
             py_runtime_error("object of type '%s' has no len()", kind_name(o->kind));
             return py_none();
@@ -827,13 +1322,21 @@ Pyo* py_len(Pyo* o) {
 
 static long long normalize_index(long long i, long long n) {
     if (i < 0) i += n;
-    if (i < 0 || i >= n) py_runtime_error("index out of range");
+    if (i < 0 || i >= n) raise_kind("IndexError", "index out of range");
     return i;
 }
 
 static Pyo* slice_apply(Pyo* obj, Pyo* sl);
 
 Pyo* py_getitem(Pyo* obj, Pyo* key) {
+    if (obj->kind == PY_INSTANCE) {
+        Pyo* m = cls_lookup(obj->u.inst.cls, "__getitem__");
+        if (m) {
+            Pyo* args[1] = {key};
+            return py_call(bound_new(m, obj), args, 1);
+        }
+        raise_kind("TypeError", "'%s' object is not subscriptable", obj->u.inst.cls->u.cls.name);
+    }
     if (key->kind == PY_SLICE) return slice_apply(obj, key);
     switch (obj->kind) {
         case PY_LIST:
@@ -847,19 +1350,29 @@ Pyo* py_getitem(Pyo* obj, Pyo* key) {
         case PY_DICT:
             for (long long i = 0; i < obj->u.dict.len; i++)
                 if (py_equal(obj->u.dict.keys[i], key)) return obj->u.dict.vals[i];
-            py_runtime_error("KeyError: %s", to_string(key, 1)->u.str.s);
+            raise_key_error(key);
             return py_none();
         case PY_RANGE: {
             long long i = normalize_index(as_int(key), range_len(obj));
             return py_int(obj->u.range.start + i * obj->u.range.step);
         }
         default:
-            py_runtime_error("'%s' object is not subscriptable", kind_name(obj->kind));
+            raise_kind("TypeError", "'%s' object is not subscriptable", kind_name(obj->kind));
             return py_none();
     }
 }
 
 void py_setitem(Pyo* obj, Pyo* key, Pyo* value) {
+    if (obj->kind == PY_INSTANCE) {
+        Pyo* m = cls_lookup(obj->u.inst.cls, "__setitem__");
+        if (m) {
+            Pyo* args[2] = {key, value};
+            py_call(bound_new(m, obj), args, 2);
+            return;
+        }
+        raise_kind("TypeError", "'%s' object does not support item assignment",
+                   obj->u.inst.cls->u.cls.name);
+    }
     if (obj->kind == PY_LIST) {
         obj->u.list.items[normalize_index(as_int(key), obj->u.list.len)] = value;
         return;
@@ -991,7 +1504,31 @@ int py_iter_next(Pyo* it, Pyo** out) {
 
 /* ---------------- calls ---------------- */
 Pyo* py_call_kw(Pyo* fn, Pyo** args, int argc, Pyo** kwnames, Pyo** kwvals, int nkw) {
-    if (fn->kind != PY_FUNC) py_runtime_error("'%s' object is not callable", kind_name(fn->kind));
+    if (fn->kind == PY_EXC_TYPE) {
+        exc_init();
+        return exc_new(fn, py_tuple(args, argc));
+    }
+    if (fn->kind == PY_BOUND) {
+        Pyo** a2 = (Pyo**)malloc((size_t)(argc + 1) * sizeof(Pyo*));
+        a2[0] = fn->u.bound.self;
+        if (argc) memcpy(a2 + 1, args, (size_t)argc * sizeof(Pyo*));
+        Pyo* r = py_call_kw(fn->u.bound.func, a2, argc + 1, kwnames, kwvals, nkw);
+        free(a2);
+        return r;
+    }
+    if (fn->kind == PY_CLASS) {
+        Pyo* inst = instance_new(fn);
+        Pyo* init = cls_lookup(fn, "__init__");
+        if (init && init->kind == PY_FUNC) {
+            Pyo** a2 = (Pyo**)malloc((size_t)(argc + 1) * sizeof(Pyo*));
+            a2[0] = inst;
+            if (argc) memcpy(a2 + 1, args, (size_t)argc * sizeof(Pyo*));
+            py_call_kw(init, a2, argc + 1, kwnames, kwvals, nkw);
+            free(a2);
+        }
+        return inst;
+    }
+    if (fn->kind != PY_FUNC) raise_kind("TypeError", "'%s' object is not callable", kind_name(fn->kind));
     if (fn->u.func.is_builtin)
         return py_call_builtin(fn->u.func.name, args, argc, kwnames, kwvals, nkw);
     int np = fn->u.func.nparams;
@@ -1047,7 +1584,22 @@ Pyo* py_call_kw(Pyo* fn, Pyo** args, int argc, Pyo** kwnames, Pyo** kwvals, int 
                              fn->u.func.params[p]);
         }
     }
-    Pyo* r = fn->u.func.fn(bound, nslots);
+    Pyo* r;
+    if (fn->u.func.ncells > 0) {
+        int total = fn->u.func.ncells + nslots;
+        Pyo** all = (Pyo**)malloc((size_t)(total + 1) * sizeof(Pyo*));
+        if (!all) py_runtime_error("out of memory");
+        memcpy(all, fn->u.func.cells, (size_t)fn->u.func.ncells * sizeof(Pyo*));
+        memcpy(all + fn->u.func.ncells, bound, (size_t)nslots * sizeof(Pyo*));
+        py_gc_region_push(all, (size_t)total * sizeof(Pyo*));
+        r = fn->u.func.fn(all, total);
+        py_gc_region_pop();
+        free(all);
+    } else {
+        py_gc_region_push(bound, (size_t)nslots * sizeof(Pyo*));
+        r = fn->u.func.fn(bound, nslots);
+        py_gc_region_pop();
+    }
     free(bound);
     free(filled);
     return r;
@@ -1214,51 +1766,50 @@ Pyo* py_dict_of(Pyo* x) {
     return o;
 }
 
-static int cmp_asc(const void* a, const void* b) {
-    Pyo* x = *(Pyo**)a;
-    Pyo* y = *(Pyo**)b;
-    if (py_equal(x, y)) return 0;
-    return py_less(x, y) ? -1 : 1;
-}
 typedef struct {
     Pyo* key;
     Pyo* val;
     long long idx;
 } KItem;
 
+static int g_sort_reverse = 0;
+
 static int cmp_kitem(const void* pa, const void* pb) {
     const KItem* a = (const KItem*)pa;
     const KItem* b = (const KItem*)pb;
-    if (!py_equal(a->key, b->key)) return py_less(a->key, b->key) ? -1 : 1;
-    if (a->idx < b->idx) return -1;
-    if (a->idx > b->idx) return 1;
-    return 0;
+    int c = 0;
+    if (!py_equal(a->key, b->key)) c = py_less(a->key, b->key) ? -1 : 1;
+    if (g_sort_reverse) c = -c;
+    if (c != 0) return c;
+    return (a->idx < b->idx) ? -1 : (a->idx > b->idx) ? 1 : 0;
+}
+
+static void sort_items(Pyo** items, long long n, Pyo* key, Pyo* reverse) {
+    if (n <= 1) return;
+    KItem* arr = (KItem*)malloc((size_t)n * sizeof(KItem));
+    if (!arr) py_runtime_error("out of memory");
+    py_gc_region_push(arr, (size_t)n * sizeof(KItem));
+    int use_key = key && key->kind != PY_NONE;
+    for (long long i = 0; i < n; i++) {
+        arr[i].val = items[i];
+        arr[i].idx = i;
+        if (use_key) {
+            Pyo* one[1] = {items[i]};
+            arr[i].key = py_call_kw(key, one, 1, NULL, NULL, 0);
+        } else {
+            arr[i].key = items[i];
+        }
+    }
+    g_sort_reverse = reverse && py_truth(reverse);
+    qsort(arr, (size_t)n, sizeof(KItem), cmp_kitem);
+    for (long long i = 0; i < n; i++) items[i] = arr[i].val;
+    py_gc_region_pop();
+    free(arr);
 }
 
 Pyo* py_sorted(Pyo* x, Pyo* reverse, Pyo* key) {
     Pyo* l = py_list_of(x);
-    if (key && key->kind != PY_NONE) {
-        long long n = l->u.list.len;
-        KItem* arr = n ? (KItem*)malloc((size_t)n * sizeof(KItem)) : NULL;
-        for (long long i = 0; i < n; i++) {
-            arr[i].val = l->u.list.items[i];
-            arr[i].idx = i;
-            Pyo* one[1] = {arr[i].val};
-            arr[i].key = py_call_kw(key, one, 1, NULL, NULL, 0);
-        }
-        qsort(arr, (size_t)n, sizeof(KItem), cmp_kitem);
-        for (long long i = 0; i < n; i++) l->u.list.items[i] = arr[i].val;
-        free(arr);
-    } else {
-        qsort(l->u.list.items, (size_t)l->u.list.len, sizeof(Pyo*), cmp_asc);
-    }
-    if (reverse && py_truth(reverse)) {
-        for (long long i = 0, j = l->u.list.len - 1; i < j; i++, j--) {
-            Pyo* t = l->u.list.items[i];
-            l->u.list.items[i] = l->u.list.items[j];
-            l->u.list.items[j] = t;
-        }
-    }
+    sort_items(l->u.list.items, l->u.list.len, key, reverse);
     return l;
 }
 Pyo* py_enumerate(Pyo* x, Pyo* start) {
@@ -1317,6 +1868,21 @@ Pyo* py_all(Pyo** args, int argc) {
     return py_true();
 }
 Pyo* py_isinstance(Pyo* x, Pyo* t) {
+    if (t->kind == PY_TUPLE) {
+        for (long long i = 0; i < t->u.tuple.len; i++)
+            if (py_truth(py_isinstance(x, t->u.tuple.items[i]))) return py_true();
+        return py_false();
+    }
+    if (t->kind == PY_CLASS) {
+        Pyo* c = x->kind == PY_INSTANCE ? x->u.inst.cls : (x->kind == PY_CLASS ? x : NULL);
+        while (c && c->kind == PY_CLASS) {
+            if (c == t) return py_true();
+            c = c->u.cls.base;
+        }
+        return py_false();
+    }
+    if (t->kind == PY_EXC_TYPE)
+        return py_exc_matches(x, t) ? py_true() : py_false();
     const char* name = t->kind == PY_STR ? t->u.str.s : (t->kind == PY_FUNC ? t->u.func.name : "");
     const char* k = kind_name(x->kind);
     if (strcmp(name, k) == 0) return py_true();
@@ -1637,7 +2203,7 @@ static Pyo* list_method(Pyo* self, const char* name, Pyo** args, int argc) {
         return py_int(c);
     }
     if (strcmp(name, "sort") == 0) {
-        qsort(self->u.list.items, (size_t)self->u.list.len, sizeof(Pyo*), cmp_asc);
+        sort_items(self->u.list.items, self->u.list.len, NULL, NULL);
         return py_none();
     }
     if (strcmp(name, "reverse") == 0) {
@@ -1692,7 +2258,7 @@ static Pyo* dict_method(Pyo* self, const char* name, Pyo** args, int argc) {
             }
         }
         if (argc > 1) return args[1];
-        py_runtime_error("KeyError");
+        raise_key_error(args[0]);
     }
     if (strcmp(name, "setdefault") == 0) {
         Pyo* v = dict_get(self, args[0]);
@@ -1974,7 +2540,7 @@ static Pyo* set_method(Pyo* self, const char* name, Pyo** args, int argc) {
                 self->u.set.len--;
                 return py_none();
             }
-        py_runtime_error("KeyError");
+        raise_key_error(args[0]);
     }
     if (strcmp(name, "clear") == 0) {
         self->u.set.len = 0;
@@ -2034,31 +2600,14 @@ static Pyo* set_method(Pyo* self, const char* name, Pyo** args, int argc) {
 
 void py_list_sort(Pyo* list, Pyo* reverse, Pyo* key) {
     if (list->kind != PY_LIST) py_runtime_error("'%s' object has no attribute 'sort'", kind_name(list->kind));
-    if (key && key->kind != PY_NONE) {
-        long long n = list->u.list.len;
-        KItem* arr = n ? (KItem*)malloc((size_t)n * sizeof(KItem)) : NULL;
-        for (long long i = 0; i < n; i++) {
-            arr[i].val = list->u.list.items[i];
-            arr[i].idx = i;
-            Pyo* one[1] = {arr[i].val};
-            arr[i].key = py_call_kw(key, one, 1, NULL, NULL, 0);
-        }
-        qsort(arr, (size_t)n, sizeof(KItem), cmp_kitem);
-        for (long long i = 0; i < n; i++) list->u.list.items[i] = arr[i].val;
-        free(arr);
-    } else {
-        qsort(list->u.list.items, (size_t)list->u.list.len, sizeof(Pyo*), cmp_asc);
-    }
-    if (reverse && py_truth(reverse)) {
-        for (long long i = 0, j = list->u.list.len - 1; i < j; i++, j--) {
-            Pyo* t = list->u.list.items[i];
-            list->u.list.items[i] = list->u.list.items[j];
-            list->u.list.items[j] = t;
-        }
-    }
+    sort_items(list->u.list.items, list->u.list.len, key, reverse);
 }
 
 Pyo* py_method(Pyo* obj, const char* name, Pyo** args, int argc) {
+    if (obj->kind == PY_INSTANCE || obj->kind == PY_CLASS) {
+        Pyo* attr = py_getattr(obj, name);
+        return py_call(attr, args, argc);
+    }
     switch (obj->kind) {
         case PY_LIST: return list_method(obj, name, args, argc);
         case PY_STR: return str_method(obj, name, args, argc);
@@ -2200,3 +2749,324 @@ Pyo* py_math_call(const char* name, Pyo** args, int argc) {
 }
 
 void py_shutdown(void) {}
+
+/* ---------------- exceptions ---------------- */
+
+typedef struct {
+    const char* name;
+    int base;
+} ExcDef;
+
+static const ExcDef EXC_DEFS[] = {
+    {"BaseException", -1},
+    {"Exception", 0},
+    {"ArithmeticError", 1},
+    {"ZeroDivisionError", 2},
+    {"OverflowError", 2},
+    {"FloatingPointError", 2},
+    {"LookupError", 1},
+    {"IndexError", 6},
+    {"KeyError", 6},
+    {"AssertionError", 1},
+    {"AttributeError", 1},
+    {"NameError", 1},
+    {"NotImplementedError", 1},
+    {"RuntimeError", 1},
+    {"StopIteration", 1},
+    {"TypeError", 1},
+    {"ValueError", 1},
+    {"ImportError", 1},
+    {"OSError", 1},
+    {"EOFError", 1},
+    {"UnicodeError", 15},
+    {"KeyboardInterrupt", 0},
+    {"SystemExit", 0},
+    {"GeneratorExit", 0},
+};
+#define NEXC ((int)(sizeof(EXC_DEFS) / sizeof(EXC_DEFS[0])))
+
+static Pyo g_exc_types[NEXC];
+static int g_exc_ready = 0;
+static PyHandler* g_handlers = NULL;
+static Pyo* g_exc = NULL;
+
+static void exc_init(void) {
+    if (g_exc_ready) return;
+    g_exc_ready = 1;
+    for (int i = 0; i < NEXC; i++) {
+        g_exc_types[i].kind = PY_EXC_TYPE;
+        g_exc_types[i].u.exc_type.name = EXC_DEFS[i].name;
+        g_exc_types[i].u.exc_type.base =
+            EXC_DEFS[i].base >= 0 ? &g_exc_types[EXC_DEFS[i].base] : NULL;
+    }
+}
+
+Pyo* py_exc_ref(const char* name) {
+    exc_init();
+    for (int i = 0; i < NEXC; i++)
+        if (strcmp(EXC_DEFS[i].name, name) == 0) return &g_exc_types[i];
+    return NULL;
+}
+
+static Pyo* exc_new(Pyo* type, Pyo* args) {
+    Pyo* o = py_new(PY_EXCEPTION);
+    o->u.exc.type = type;
+    o->u.exc.args = args;
+    return o;
+}
+
+Pyo* py_exc_current(void) { return g_exc; }
+void py_exc_set(Pyo* exc) { g_exc = exc; }
+
+void py_exc_push(PyHandler* h) {
+    h->prev = g_handlers;
+    g_handlers = h;
+}
+
+void py_exc_pop(void) {
+    if (g_handlers) g_handlers = g_handlers->prev;
+}
+
+static int exc_is_subtype(Pyo* t, Pyo* base) {
+    while (t) {
+        if (t == base) return 1;
+        t = t->u.exc_type.base;
+    }
+    return 0;
+}
+
+int py_exc_matches(Pyo* exc, Pyo* typ) {
+    exc_init();
+    if (!exc || exc->kind != PY_EXCEPTION) return 0;
+    if (typ->kind == PY_TUPLE) {
+        for (long long i = 0; i < typ->u.tuple.len; i++)
+            if (py_exc_matches(exc, typ->u.tuple.items[i])) return 1;
+        return 0;
+    }
+    if (typ->kind == PY_EXC_TYPE) return exc_is_subtype(exc->u.exc.type, typ);
+    return 0;
+}
+
+static void exc_print_uncaught(Pyo* exc) {
+    fputs("Traceback (most recent call last):\n", stderr);
+    Pyo* s = to_string(exc, 0);
+    fprintf(stderr, "%s: %.*s\n", exc->u.exc.type->u.exc_type.name, (int)s->u.str.len, s->u.str.s);
+}
+
+void py_raise(Pyo* exc) {
+    exc_init();
+    if (!exc || exc->kind != PY_EXCEPTION) {
+        Pyo* a[1] = {py_str("exceptions must derive from BaseException")};
+        exc = exc_new(py_exc_ref("TypeError"), py_tuple(a, 1));
+    }
+    g_exc = exc;
+    if (!g_handlers) {
+        exc_print_uncaught(exc);
+        py_shutdown();
+        exit(1);
+    }
+    PyHandler* h = g_handlers;
+    g_handlers = h->prev;
+    longjmp(h->jb, 1);
+}
+
+void py_raise_value(Pyo* v) {
+    if (v && v->kind == PY_EXCEPTION) {
+        py_raise(v);
+        return;
+    }
+    if (v && v->kind == PY_EXC_TYPE) {
+        py_raise(exc_new(v, py_tuple(NULL, 0)));
+        return;
+    }
+    Pyo* a[1] = {py_str("exceptions must derive from BaseException")};
+    py_raise(exc_new(py_exc_ref("TypeError"), py_tuple(a, 1)));
+}
+
+void py_reraise(void) {
+    if (!g_exc) {
+        Pyo* a[1] = {py_str("No active exception to reraise")};
+        py_raise(exc_new(py_exc_ref("RuntimeError"), py_tuple(a, 1)));
+    }
+    py_raise(g_exc);
+}
+
+static void py_raise_fmt(Pyo* type, const char* fmt, va_list ap) {
+    char buf[1024];
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    Pyo* a[1] = {py_str(buf)};
+    py_raise(exc_new(type, py_tuple(a, 1)));
+}
+
+static void raise_kind(const char* t, const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    py_raise_fmt(py_exc_ref(t), fmt, ap);
+    va_end(ap);
+}
+
+static void raise_key_error(Pyo* key) {
+    Pyo* a[1] = {key};
+    py_raise(exc_new(py_exc_ref("KeyError"), py_tuple(a, 1)));
+}
+
+/* ---------------- classes and instances ---------------- */
+
+Pyo* py_class(const char* name, Pyo* base) {
+    Pyo* o = py_new(PY_CLASS);
+    o->u.cls.name = name;
+    o->u.cls.base = base;
+    o->u.cls.dict = py_dict(NULL, NULL, 0);
+    return o;
+}
+
+void py_class_set(Pyo* cls, const char* name, Pyo* value) {
+    py_dict_set(cls->u.cls.dict, py_str(name), value);
+}
+
+static Pyo* bound_new(Pyo* func, Pyo* self) {
+    Pyo* o = py_new(PY_BOUND);
+    o->u.bound.func = func;
+    o->u.bound.self = self;
+    return o;
+}
+
+/* First value for `name` found walking the class and its bases. */
+static Pyo* cls_lookup(Pyo* cls, const char* name) {
+    Pyo* key = py_str(name);
+    while (cls && cls->kind == PY_CLASS) {
+        Pyo* v = dict_get(cls->u.cls.dict, key);
+        if (v) return v;
+        cls = cls->u.cls.base;
+    }
+    return NULL;
+}
+
+Pyo* py_getattr(Pyo* obj, const char* name) {
+    if (obj->kind == PY_INSTANCE) {
+        Pyo* v = dict_get(obj->u.inst.dict, py_str(name));
+        if (v) return v;
+        Pyo* c = cls_lookup(obj->u.inst.cls, name);
+        if (c) return c->kind == PY_FUNC ? bound_new(c, obj) : c;
+        raise_kind("AttributeError", "'%s' object has no attribute '%s'",
+                   obj->u.inst.cls->u.cls.name, name);
+    }
+    if (obj->kind == PY_CLASS) {
+        Pyo* c = cls_lookup(obj, name);
+        if (c) return c;
+        raise_kind("AttributeError", "type object '%s' has no attribute '%s'", obj->u.cls.name,
+                   name);
+    }
+    raise_kind("AttributeError", "'%s' object has no attribute '%s'", kind_name(obj->kind), name);
+    return py_none();
+}
+
+void py_setattr(Pyo* obj, const char* name, Pyo* value) {
+    if (obj->kind == PY_INSTANCE) {
+        py_dict_set(obj->u.inst.dict, py_str(name), value);
+        return;
+    }
+    if (obj->kind == PY_CLASS) {
+        py_dict_set(obj->u.cls.dict, py_str(name), value);
+        return;
+    }
+    raise_kind("AttributeError", "'%s' object has no attribute '%s'", kind_name(obj->kind), name);
+}
+
+static Pyo* instance_new(Pyo* cls) {
+    Pyo* o = py_new(PY_INSTANCE);
+    o->u.inst.cls = cls;
+    o->u.inst.dict = py_dict(NULL, NULL, 0);
+    return o;
+}
+
+/* ---------------- garbage collector internals ---------------- */
+
+void py_gc_register_root(Pyo** slot) {
+    if (g_roots_len == g_roots_cap) {
+        g_roots_cap = g_roots_cap ? g_roots_cap * 2 : 16;
+        g_roots = (Pyo***)realloc(g_roots, g_roots_cap * sizeof(Pyo**));
+        if (!g_roots) py_runtime_error("out of memory");
+    }
+    g_roots[g_roots_len++] = slot;
+}
+
+void py_gc_init(void* base) {
+    g_stack_base = (char*)base;
+    py_gc_register_root(&g_exc);
+}
+
+void py_gc_region_push(void* base, size_t bytes) {
+    if (g_regions_len == g_regions_cap) {
+        g_regions_cap = g_regions_cap ? g_regions_cap * 2 : 16;
+        g_regions = (GcRegion*)realloc(g_regions, g_regions_cap * sizeof(GcRegion));
+        if (!g_regions) py_runtime_error("out of memory");
+    }
+    g_regions[g_regions_len].lo = (char*)base;
+    g_regions[g_regions_len].hi = (char*)base + bytes;
+    g_regions_len++;
+}
+
+void py_gc_region_pop(void) {
+    if (g_regions_len) g_regions_len--;
+}
+
+/* Reading the live C stack word by word is the point of a conservative
+   collector; tell sanitizers not to flag those intentional reads. */
+#if defined(__clang__)
+__attribute__((no_sanitize("address")))
+#elif defined(__GNUC__)
+__attribute__((no_sanitize_address))
+#endif
+static void gc_scan_range(char* lo, char* hi) {
+    if (lo > hi) {
+        char* t = lo;
+        lo = hi;
+        hi = t;
+    }
+    size_t words = (size_t)(hi - lo) / sizeof(void*);
+    void** w = (void**)lo;
+    for (size_t k = 0; k < words; k++) {
+        Pyo* cand = (Pyo*)w[k];
+        if (gc_set_has(cand)) gc_push(cand);
+    }
+}
+
+static void gc_collect(void) {
+    g_work_len = 0;
+
+    char* here = (char*)&here;
+    gc_scan_range(g_stack_base, here);
+    for (size_t r = 0; r < g_roots_len; r++) {
+        Pyo* cand = *g_roots[r];
+        if (gc_set_has(cand)) gc_push(cand);
+    }
+    for (size_t r = 0; r < g_regions_len; r++)
+        gc_scan_range(g_regions[r].lo, g_regions[r].hi);
+
+    while (g_work_len) {
+        Pyo* o = g_work[--g_work_len];
+        gc_scan_children(o);
+    }
+
+    Pyo** link = &g_gc_head;
+    while (*link) {
+        Pyo* o = *link;
+        if (o->gc_mark) {
+            o->gc_mark = 0;
+            link = &o->gc_next;
+        } else {
+            *link = o->gc_next;
+            gc_free_obj(o);
+            g_gc_live--;
+        }
+    }
+
+    if (g_gc_set) memset(g_gc_set, 0, g_gc_cap * sizeof(Pyo*));
+    for (Pyo* o = g_gc_head; o; o = o->gc_next) {
+        size_t i = gc_hash(o) & (g_gc_cap - 1);
+        while (g_gc_set[i]) i = (i + 1) & (g_gc_cap - 1);
+        g_gc_set[i] = o;
+    }
+    g_gc_threshold = g_gc_live + 200000;
+}

@@ -23,8 +23,8 @@
   <section class="section">
     <div class="container">
       <h1 style="font-size:38px;margin:0 0 8px;">Install pycompile</h1>
-      <p class="sub">pycompile is a Rust program. Installing it gives you two commands —
-      <code>pycompile</code> and <code>python_compiler</code> — that behave identically.</p>
+      <p class="sub">pycompile is a Rust program. Installing it gives you the
+      <code>pycompile</code> command.</p>
 
       <h2>Requirements</h2>
       <div class="grid grid-2">
@@ -56,9 +56,8 @@
           <div class="num"></div>
           <div>
             <h3>Verify the install</h3>
-            <p>Both commands must print the same version.</p>
-            <pre><code>pycompile --version
-python_compiler --version</code></pre>
+            <p>It must print the installed version.</p>
+            <pre><code>pycompile --version</code></pre>
           </div>
         </div>
         <div class="step">
@@ -103,7 +102,7 @@ cd pycompile</code></pre>
 
       <h2 id="man" style="margin-top:56px;">Install the man page</h2>
       <p>Once installed you can drop a real <code>man(1)</code> page so that
-      <code>man pycompile</code> and <code>man python_compiler</code> work:</p>
+      <code>man pycompile</code> works:</p>
       <pre><code><span class="tok-c"># Install into /usr/local/share/man/man1 (may need sudo)</span>
 sudo pycompile man --install
 
@@ -111,8 +110,7 @@ sudo pycompile man --install
 pycompile man --install --prefix ~/.local
 
 <span class="tok-c"># Then read it</span>
-man pycompile
-man python_compiler</code></pre>
+man pycompile</code></pre>
       <p class="muted">If you installed into a custom prefix, make sure your man path
       includes it (for example <code>export MANPATH=~/.local/share/man:$MANPATH</code>).</p>
 
@@ -134,16 +132,16 @@ pycompile hello.py -o hello
       </div>
 
       <h2 style="margin-top:56px;">Package managers</h2>
-      <p class="sub">Every channel below installs the same native <code>pycompile</code> and
-      <code>python_compiler</code> commands.</p>
+      <p class="sub">Every channel below installs the same native <code>pycompile</code>
+      command.</p>
       <div class="grid grid-2">
         <div class="card">
           <h3>Debian / Ubuntu</h3>
-          <pre><code>sudo apt install ./pycompile_0.1.0_amd64.deb</code></pre>
+          <pre><code>sudo apt install ./pycompile_0.2.0_amd64.deb</code></pre>
         </div>
         <div class="card">
           <h3>Fedora / RHEL / openSUSE</h3>
-          <pre><code>sudo dnf install ./pycompile-0.1.0-1.x86_64.rpm</code></pre>
+          <pre><code>sudo dnf install ./pycompile-0.2.0-1.x86_64.rpm</code></pre>
         </div>
         <div class="card">
           <h3>macOS (Homebrew)</h3>

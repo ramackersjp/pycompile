@@ -1,0 +1,10 @@
+cannot divide: division by zero
+5 None
+1 missing 'b'
+2 out of range
+['try', 'ok', 'finally']
+['try', 'caught raised', 'finally']
+handling inner
+outer got inner
+common v common t index
+ok assert must be positive

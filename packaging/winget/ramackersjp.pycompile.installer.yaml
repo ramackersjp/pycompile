@@ -6,8 +6,6 @@ NestedInstallerType: portable
 NestedInstallerFiles:
   - RelativeFilePath: pycompile-x86_64-pc-windows-msvc\pycompile.exe
     PortableCommandAlias: pycompile
-  - RelativeFilePath: pycompile-x86_64-pc-windows-msvc\python_compiler.exe
-    PortableCommandAlias: python_compiler
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/ramackersjp/pycompile/releases/download/v0.1.0/pycompile-x86_64-pc-windows-msvc.zip

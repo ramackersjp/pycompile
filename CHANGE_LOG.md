@@ -8,7 +8,7 @@ factual, and reference the affected modules or files where useful.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-10-15
 
 ### Added
 
@@ -24,8 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `*args` / `**kwargs` parameters, calls with positional/keyword/`*`/`**` arguments,
   chained comparisons, `in`/`not in`, `is`/`is not`, slicing, item and augmented
   assignment, the `math` and `sys` modules.
-- Two equivalent command-line entry points: `pycompile` and `python_compiler`
-  (`src/lib.rs`, `src/main.rs`, `src/bin/python_compiler.rs`).
+- Single command-line entry point: `pycompile` (`src/lib.rs`, `src/main.rs`).
 - CLI options: `-o/--output`, `--emit-c`, `--keep-temps`, `-r/--run`, `--man`,
   `-h/--help`, `-V/--version`.
 - Terminal manual and man-page installation: `pycompile man`,
@@ -33,6 +32,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/pycompile.1`).
 - `key` and `reverse` support for `sorted()` and `list.sort()`, including first-class
   references to common builtins such as `len`, `str`, `int` and `abs`.
+- `%` string formatting in `runtime/pyrt.c` (`percent_format`): `%s`/`%r`/`%a`, integer
+  and float conversions, flags (`- 0 + space #`), width, precision, `%%`, and mapping
+  form `%(name)s`, matching CPython output.
+- `lambda` expressions, nested functions and closures: cell objects (`PY_CELL`,
+  `py_cell_new`/`py_cell_get`/`py_cell_set`), free-variable analysis and
+  `py_closure`, with late binding and closures over enclosing locals and parameters
+  (`src/ast.rs`, `src/parser.rs`, `src/codegen.rs`, `runtime/pyrt.c`).
+- Exception handling: `try` / `except` / `except ... as name` / `else` / `finally`,
+  `raise` (bare, `raise E`, `raise E(...)`) and `assert`. The runtime uses
+  `setjmp`/`longjmp` handlers and a hierarchy of built-in exception types
+  (`ZeroDivisionError`, `IndexError`, `KeyError`, `TypeError`, `ValueError`,
+  `AssertionError`, `RuntimeError`, ...). Runtime errors now raise catchable
+  exceptions; uncaught exceptions print a traceback and exit 1.
+- Conservative mark-and-sweep garbage collector (`runtime/pyrt.c`): objects are
+  tracked in an intrusive list and a hash set; collection scans the C stack, the
+  registered global roots and a few runtime roots, marks reachable objects and frees
+  the rest, including unreachable reference cycles. The generated `main` records the
+  stack base via `py_gc_init` and registers its globals with `py_gc_register_root`
+  (`src/codegen.rs`).
+- Classes: `class` definitions with methods, `__init__`, class attributes and
+  instance attributes, attribute access and assignment, single inheritance with
+  method lookup along the base chain, class instantiation, `isinstance`, and the
+  `__str__`, `__repr__`, `__eq__`, `__len__`, `__getitem__`, `__setitem__` and
+  `__contains__` protocols (`src/ast.rs`, `src/parser.rs`, `src/codegen.rs`,
+  `runtime/pyrt.c`).
 - Static documentation site with install and download instructions (`docs/`), deployed
   to Vercel with zero configuration (`vercel.json`: no build step, `outputDirectory`
   set to `docs`).
@@ -60,9 +84,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes and limitations
 
-- No garbage collection: allocations are not reclaimed until process exit.
-- `class`, closures, nested scopes, exceptions (`try`/`except`), `with`, decorators,
-  `lambda`, `async`/`await`, and modules other than `math`/`sys` are not supported and
-  produce a clear compile-time error.
-- `%` string formatting is not supported; use f-strings.
-- `sort`/`sorted` are not fully stable when `reverse=True`.
+- The garbage collector is conservative: it scans the whole C stack on each
+  collection and may keep an unreachable object alive a little longer than strictly
+  necessary.
+- `super()`, multiple inheritance, decorators, `with`, generators, `async`/`await`,
+  and modules other than `math`/`sys` are not supported and produce a clear
+  compile-time error.
+- A `return`, `break` or `continue` inside a `try` that has a `finally` clause is
+  rejected at compile time.
+- An uncaught exception prints a single-line traceback (no file/line frames).

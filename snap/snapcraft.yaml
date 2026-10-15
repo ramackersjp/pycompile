@@ -8,8 +8,7 @@ description: |
   Python into C, invokes the system C compiler, and emits a single standalone
   native executable. No interpreter is required at run time.
 
-  Installing this snap provides two equivalent commands, pycompile and
-  python-compiler.
+  Installing this snap provides the pycompile command.
 grade: stable
 confinement: classic
 license: MIT
@@ -29,5 +28,3 @@ parts:
 apps:
   pycompile:
     command: bin/pycompile
-  python-compiler:
-    command: bin/python_compiler

@@ -27,9 +27,8 @@ class Pycompile < Formula
   end
 
   def install
-    bin.install "pycompile", "python_compiler"
+    bin.install "pycompile"
     man1.install "pycompile.1" => "pycompile.1"
-    man1.install "pycompile.1" => "python_compiler.1"
   end
 
   test do

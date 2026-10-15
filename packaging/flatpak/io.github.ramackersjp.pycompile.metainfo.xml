@@ -9,7 +9,6 @@
       compiler, and emits a single standalone native executable. No interpreter is
       required at run time.
     </p>
-    <p>Both the pycompile and python_compiler commands are provided.</p>
   </description>
   <launchable type="desktop-id">io.github.ramackersjp.pycompile.desktop</launchable>
   <url type="homepage">https://github.com/ramackersjp/pycompile</url>

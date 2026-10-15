@@ -105,6 +105,13 @@ pub enum Expr {
         iter: Box<Expr>,
         cond: Option<Box<Expr>>,
     },
+    Lambda {
+        id: usize,
+        params: Vec<Param>,
+        vararg: Option<String>,
+        kwarg: Option<String>,
+        body: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -139,6 +146,7 @@ pub enum Stmt {
     Continue,
     Pass,
     FunctionDef {
+        id: usize,
         name: String,
         params: Vec<Param>,
         vararg: Option<String>,
@@ -156,6 +164,29 @@ pub enum Stmt {
     },
     Assert(Expr, Option<Expr>),
     Del(Vec<Expr>),
+    ClassDef {
+        id: usize,
+        name: String,
+        bases: Vec<Expr>,
+        body: Vec<Stmt>,
+    },
+    Raise {
+        exc: Option<Expr>,
+        cause: Option<Expr>,
+    },
+    Try {
+        body: Vec<Stmt>,
+        handlers: Vec<ExceptHandler>,
+        orelse: Vec<Stmt>,
+        finally: Vec<Stmt>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct ExceptHandler {
+    pub typ: Option<Expr>,
+    pub name: Option<String>,
+    pub body: Vec<Stmt>,
 }
 
 #[derive(Debug, Clone)]

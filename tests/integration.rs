@@ -68,6 +68,26 @@ fn collections() {
 }
 
 #[test]
+fn closures() {
+    check_example("closures", &[]);
+}
+
+#[test]
+fn exceptions() {
+    check_example("exceptions", &[]);
+}
+
+#[test]
+fn classes() {
+    check_example("classes", &[]);
+}
+
+#[test]
+fn garbage() {
+    check_example("garbage", &[]);
+}
+
+#[test]
 fn strings() {
     check_example("strings", &[]);
 }
@@ -122,9 +142,6 @@ fn relative_output_path_lands_in_cwd() {
 fn unsupported_constructs_report_errors() {
     let bin = env!("CARGO_BIN_EXE_pycompile");
     for (src, expect) in [
-        ("class Foo:\n    pass\n", "class"),
-        ("try:\n    pass\nexcept:\n    pass\n", "try"),
-        ("f = lambda x: x\n", "lambda"),
         ("with open('f') as fh:\n    pass\n", "with"),
         ("import os\n", "os"),
     ] {

@@ -3,10 +3,26 @@
 #ifndef PYRT_H
 #define PYRT_H
 
+#include <setjmp.h>
 #include <stddef.h>
 
 typedef struct Pyo Pyo;
 typedef Pyo* (*PyFn)(Pyo** args, int argc);
+
+/* Exception handling */
+typedef struct PyHandler {
+    jmp_buf jb;
+    struct PyHandler* prev;
+} PyHandler;
+void py_exc_push(PyHandler* h);
+void py_exc_pop(void);
+Pyo* py_exc_ref(const char* name);
+int  py_exc_matches(Pyo* exc, Pyo* typ);
+void py_raise(Pyo* exc);
+void py_raise_value(Pyo* v);
+void py_reraise(void);
+Pyo* py_exc_current(void);
+void py_exc_set(Pyo* exc);
 
 /* Constructors */
 Pyo* py_none(void);
@@ -26,6 +42,12 @@ Pyo* py_slice(Pyo* lower, Pyo* upper, Pyo* step);
 /* Functions */
 Pyo* py_func(PyFn fn, const char* name, const char** params, int nparams,
              Pyo** defaults, int ndefaults, int vararg, int kwarg);
+Pyo* py_closure(PyFn fn, const char* name, const char** params, int nparams,
+                Pyo** defaults, int ndefaults, int vararg, int kwarg,
+                Pyo** cells, int ncells);
+Pyo* py_cell_new(Pyo* value);
+Pyo* py_cell_get(Pyo* cell);
+void py_cell_set(Pyo* cell, Pyo* value);
 Pyo* py_builtin_ref(const char* name);
 Pyo* py_call(Pyo* fn, Pyo** args, int argc);
 Pyo* py_call_kw(Pyo* fn, Pyo** args, int argc,
@@ -82,6 +104,12 @@ int  py_iter_next(Pyo* it, Pyo** out);
 Pyo* py_method(Pyo* obj, const char* name, Pyo** args, int argc);
 void py_list_sort(Pyo* list, Pyo* reverse, Pyo* key);
 
+/* Classes and instances */
+Pyo* py_class(const char* name, Pyo* base);
+void py_class_set(Pyo* cls, const char* name, Pyo* value);
+Pyo* py_getattr(Pyo* obj, const char* name);
+void py_setattr(Pyo* obj, const char* name, Pyo* value);
+
 /* Builtins (variadic ones take an argument array) */
 Pyo* py_print(Pyo** args, int argc, Pyo* sep, Pyo* end);
 Pyo* py_builtin_str(Pyo* x);
@@ -130,5 +158,12 @@ Pyo* py_math_const(const char* name);
 /* Runtime helpers */
 void py_runtime_error(const char* fmt, ...);
 void py_shutdown(void);
+
+/* Garbage collector control. py_gc_init records the stack base (pass the
+   address of a local in main) and must be called before py_gc_register_root. */
+void py_gc_init(void* base);
+void py_gc_register_root(Pyo** slot);
+void py_gc_region_push(void* base, size_t bytes);
+void py_gc_region_pop(void);
 
 #endif /* PYRT_H */

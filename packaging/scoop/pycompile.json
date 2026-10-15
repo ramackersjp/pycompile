@@ -12,11 +12,7 @@
         }
     },
     "bin": [
-        "pycompile.exe",
-        [
-            "python_compiler.exe",
-            "python_compiler"
-        ]
+        "pycompile.exe"
     ],
     "checkver": {
         "github": "https://github.com/ramackersjp/pycompile"

@@ -17,7 +17,6 @@ pycompile - compile Python source into a standalone native binary
 
 USAGE:
     pycompile [OPTIONS] <INPUT> [-- PROGRAM_ARGS...]
-    python_compiler [OPTIONS] <INPUT> [-- PROGRAM_ARGS...]
     pycompile man [--install] [--prefix DIR]
 
 ARGS:
@@ -56,7 +55,7 @@ fn print_help() {
 }
 
 fn print_version() {
-    println!("pycompile {} (python_compiler {})", VERSION, VERSION);
+    println!("pycompile {}", VERSION);
 }
 
 pub fn parse_args(args: &[String]) -> Result<Option<Cli>> {

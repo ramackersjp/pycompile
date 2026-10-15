@@ -1,11 +1,8 @@
 .TH PYCOMPILE 1 "October 2026" "pycompile 0.1.0" "User Commands"
 .SH NAME
-pycompile, python_compiler \- compile Python source into a standalone native binary
+pycompile \- compile Python source into a standalone native binary
 .SH SYNOPSIS
 .B pycompile
-[\fIOPTIONS\fR] \fIINPUT\fR [\-\- \fIPROGRAM_ARGS\fR...]
-.br
-.B python_compiler
 [\fIOPTIONS\fR] \fIINPUT\fR [\-\- \fIPROGRAM_ARGS\fR...]
 .br
 .B pycompile
@@ -19,15 +16,6 @@ interpreter and no runtime dependency: the resulting binary runs on its own.
 .PP
 It is designed for small command-line programs and scripts where you want Python's syntax and
 speed of iteration but a portable native binary as the deliverable.
-.PP
-Two equivalent entry points are provided: the short name
-.B pycompile
-and the long name
-.BR python_compiler .
-Anywhere you can write
-.B pycompile
-you can also write
-.BR python_compiler .
 .SH QUICK START
 .PP
 Compile a single file to a native binary named after the source:
@@ -166,6 +154,35 @@ Chained comparisons,
 .IP \(bu 2
 Slicing and item assignment, augmented assignment.
 .IP \(bu 2
+.B %
+string formatting (positional and mapping forms, flags, width, precision).
+.IP \(bu 2
+.BR lambda
+expressions, nested functions and closures (including late binding).
+.IP \(bu 2
+.BR try ", " except ", " except " ... " as ", " else ", " finally ", " raise ", " assert ,
+and catchable built-in exception types.
+.IP \(bu 2
+Stable
+.B sort
+and
+.B sorted
+with
+.B reverse=True
+and
+.BR key= .
+.IP \(bu 2
+.B class
+definitions with methods,
+.BR __init__ ,
+class and instance attributes, single inheritance,
+.BR isinstance ,
+and the
+.BR __str__ , " " __repr__ , " " __eq__ , " " __len__ , " " __getitem__ , " " __setitem__
+and
+.B __contains__
+protocols.
+.IP \(bu 2
 The
 .B math
 and
@@ -174,17 +191,21 @@ modules.
 .PP
 The following are not yet supported and produce a clear compile error:
 .IP \(bu 2
-.BR class
-definitions, closures and nested scopes.
+.BR super() ,
+multiple inheritance and decorators.
 .IP \(bu 2
-.BR try ", " except ", " finally ", " with ", " raise .
-.IP \(bu 2
-Decorators,
-.BR lambda
-expressions,
+.BR with ,
+generators,
 .B async
 and
 .BR await .
+.IP \(bu 2
+.BR return ", " break " or " continue
+inside a
+.B try
+that has a
+.B finally
+clause.
 .IP \(bu 2
 Modules other than
 .B math
@@ -192,10 +213,11 @@ and
 .BR sys .
 .SH RUNTIME MODEL
 The generated C links against a small runtime library that is embedded by the compiler.
-Values are heap-allocated tagged objects. Memory is not garbage collected: allocations live
-until process exit. This keeps the compiler simple and the output small, and is fine for
-typical short-lived CLI programs. Runtime errors print a Python-style traceback to stderr
-and exit with status 1.
+Values are heap-allocated tagged objects. A conservative mark-and-sweep garbage collector
+reclaims unreachable objects by scanning the C stack, the program's globals and a few
+runtime roots; unreachable reference cycles are collected too. Because the scan is
+conservative, an object can occasionally be kept alive a little longer than strictly
+necessary. Runtime errors print a Python-style traceback to stderr and exit with status 1.
 .SH EXAMPLES
 .PP
 Compile a hello-world script:
@@ -256,9 +278,6 @@ Command line usage error.
 .TP
 .I /usr/local/share/man/man1/pycompile.1
 Installed manual page.
-.TP
-.I /usr/local/share/man/man1/python_compiler.1
-Installed manual page (alias).
 .SH SEE ALSO
 .BR man (1),
 .BR cc (1),
@@ -267,12 +286,15 @@ Installed manual page (alias).
 .BR python3 (1)
 .SH BUGS AND LIMITATIONS
 .IP \(bu 2
-No garbage collection: long-running or memory-heavy loops can grow.
+The garbage collector is conservative: it may keep an unreachable object alive a little
+longer than necessary, and it scans the whole C stack on each collection.
 .IP \(bu 2
-Closures, classes, exceptions and lambdas are not supported yet.
+.BR super() ,
+multiple inheritance and decorators are not supported.
 .IP \(bu 2
-% string formatting is not supported; use f-strings instead.
+A return, break or continue inside a try that has a finally clause is rejected at
+compile time.
 .IP \(bu 2
-sort and sorted support reverse and key but are not fully stable when reverse is true.
+An uncaught exception prints a single-line traceback without file and line frames.
 .SH AUTHOR
 Written by J.P. Ramackers and contributors. MIT licensed.
