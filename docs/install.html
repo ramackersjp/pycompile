@@ -155,14 +155,51 @@ scoop install pycompile</code></pre>
       </div>
       <div class="note">
         <strong>In review / pending first publication:</strong> Arch Linux (AUR)
-        <code>yay -S pycompile</code>, Linux (Snap) <code>sudo snap install pycompile</code>,
-        and Windows (winget) <code>winget install ramackersjp.pycompile</code>.
+        <code>yay -S pycompile</code>, Linux (Snap)
+        <code>sudo snap install python-compiler</code>, and Windows (winget)
+        <code>winget install ramackersjp.pycompile</code>.
       </div>
       <div class="note">
         <strong>Note:</strong> on Windows, <code>pycompile</code> needs a C compiler to
         produce binaries (MSVC Build Tools, MinGW-w64 or LLVM/clang). This applies only
         when you invoke pycompile, not to the compiler binary itself.
       </div>
+
+      <h2 id="uninstall" style="margin-top:56px;">Uninstall</h2>
+      <p class="sub">Remove pycompile with the same channel you installed it with.</p>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Cargo</h3>
+          <pre><code>cargo uninstall python-compiler</code></pre>
+        </div>
+        <div class="card">
+          <h3>Manual / from source</h3>
+          <pre><code>rm "$(command -v pycompile)"</code></pre>
+        </div>
+        <div class="card">
+          <h3>Debian / Ubuntu</h3>
+          <pre><code>sudo apt remove pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>Fedora / RHEL / openSUSE</h3>
+          <pre><code>sudo dnf remove pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>macOS (Homebrew)</h3>
+          <pre><code>brew uninstall pycompile</code></pre>
+        </div>
+        <div class="card">
+          <h3>Windows (Scoop)</h3>
+          <pre><code>scoop uninstall pycompile</code></pre>
+        </div>
+      </div>
+      <div class="note">
+        Other channels: Arch Linux (AUR) <code>yay -Rns pycompile</code> · Linux (Snap)
+        <code>sudo snap remove python-compiler</code> · Windows (winget)
+        <code>winget uninstall ramackersjp.pycompile</code>.
+      </div>
+      <p class="muted">If you installed the man page, remove it too:
+      <code>sudo rm /usr/local/share/man/man1/pycompile.1</code>.</p>
     </div>
   </section>
 

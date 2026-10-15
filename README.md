@@ -49,6 +49,25 @@ sudo pycompile man --install          # installs into /usr/local/share/man/man1
 pycompile man --install --prefix ~/.local
 ```
 
+### Uninstall
+
+Remove pycompile with the same channel you installed it with:
+
+| Channel | Command |
+| --- | --- |
+| Cargo | `cargo uninstall python-compiler` |
+| Manual / from source | `rm "$(command -v pycompile)"` |
+| Debian / Ubuntu | `sudo apt remove pycompile` |
+| Fedora / RHEL / openSUSE | `sudo dnf remove pycompile` |
+| macOS (Homebrew) | `brew uninstall pycompile` |
+| Windows (Scoop) | `scoop uninstall pycompile` |
+| Arch Linux (AUR) | `yay -Rns pycompile` |
+| Linux (Snap) | `sudo snap remove python-compiler` |
+| Windows (winget) | `winget uninstall ramackersjp.pycompile` |
+
+If you installed the man page, remove it as well:
+`sudo rm /usr/local/share/man/man1/pycompile.1`.
+
 ## Usage
 
 ```
@@ -182,6 +201,14 @@ output. They need a C compiler on `PATH` (see the `CC` environment variable).
 
 See [`.github/AGENTS.md`](.github/AGENTS.md) for a detailed architecture overview, and
 [`CHANGE_LOG.md`](CHANGE_LOG.md) for the development log.
+
+## Issues
+
+Bugs, crashes, wrong output and missing features are tracked on GitHub. Search the
+[existing issues](https://github.com/ramackersjp/pycompile/issues) first, then open a
+[new issue](https://github.com/ramackersjp/pycompile/issues/new) with your
+`pycompile --version`, your operating system, the command you ran, a minimal Python
+snippet, and the expected versus actual output. A GitHub account is required to file one.
 
 ## License
 
